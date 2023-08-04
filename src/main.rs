@@ -1,9 +1,12 @@
 use std::{process::Command, sync::OnceLock};
 
 use anyhow::{bail, Context};
+use env_logger::Builder;
+use log::{debug, warn, LevelFilter};
 use regex::Regex;
 
 fn main() -> anyhow::Result<()> {
+    init_logging(LevelFilter::Debug)?;
     let targets = vec![
         Target::new("127.0.0.1".to_string(), None),
         Target::new("8.8.8.8".to_string(), None),
@@ -19,11 +22,17 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn init_logging(level: LevelFilter) -> anyhow::Result<()> {
+    Builder::new().filter(None, level).try_init()?;
+    Ok(())
+}
+
 /// Finds the round trip time to the target if less than timeout
 fn ping(target: &Target) -> anyhow::Result<PingResponse> {
     static CELL_PASS: OnceLock<Regex> = OnceLock::new();
     static CELL_FAIL: OnceLock<Regex> = OnceLock::new();
     let re_pass = CELL_PASS.get_or_init(|| {
+        debug!("Compile regex for passing ping responses");
         Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.(\d+) ms").expect("Failed to compile regex")
     });
     let re_fail = CELL_FAIL.get_or_init(|| {
@@ -37,7 +46,14 @@ fn ping(target: &Target) -> anyhow::Result<PingResponse> {
         .output()
         .context("Failed to execute ping")?;
     let stdout = std::str::from_utf8(&output.stdout).context("Failed to convert stdout to ut8")?;
-    // TODO check stderr and log if it is not empty
+
+    // Check if stderr is not empty
+    if !output.stderr.is_empty() {
+        let stderr =
+            std::str::from_utf8(&output.stderr).context("Failed to convert stdout to ut8")?;
+        warn!("Pinging {target:?} stderr not empty: {stderr:?}");
+    }
+
     if let Some(captures) = re_pass.captures(stdout) {
         // Regex matched and can only match if both capture groups are found as they are not optional
         let ms = captures.get(1).unwrap();
@@ -59,6 +75,7 @@ fn ping(target: &Target) -> anyhow::Result<PingResponse> {
     }
 }
 
+#[derive(Debug)]
 struct Target {
     host: String,
 
