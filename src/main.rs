@@ -1,4 +1,4 @@
-use std::{process::Command, sync::OnceLock};
+use std::{fmt::Display, process::Command, sync::OnceLock};
 
 use anyhow::{bail, Context};
 use env_logger::Builder;
@@ -11,7 +11,7 @@ fn main() -> anyhow::Result<()> {
         Target::new("127.0.0.1".to_string(), None),
         Target::new("8.8.8.8".to_string(), None),
         Target::new("192.168.1.205".to_string(), None),
-        Target::new("192.168.8.8".to_string(), None),
+        Target::new("192.168.8.8".to_string(), Some(1.into())),
     ];
 
     for target in targets {
@@ -19,6 +19,7 @@ fn main() -> anyhow::Result<()> {
         let _ = dbg!(result);
         println!("-----");
     }
+    println!("Completed");
     Ok(())
 }
 
@@ -29,9 +30,17 @@ fn init_logging(level: LevelFilter) -> anyhow::Result<()> {
 
 /// Finds the round trip time to the target if less than timeout
 fn ping(target: &Target) -> anyhow::Result<PingResponse> {
-    let output = Command::new("ping")
-        .arg("-c")
-        .arg("1")
+    let mut cmd = Command::new("ping");
+    cmd.arg("-c").arg("1");
+
+    match &target.timeout {
+        Some(duration) => {
+            cmd.arg("-w").arg(duration.to_string());
+        }
+        None => (), // TODO Once we have global settings we need to check those for a value
+    }
+
+    let output = cmd
         .arg(&target.host)
         .output()
         .context("Failed to execute ping")?;
@@ -66,6 +75,11 @@ struct Milliseconds(u16);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Seconds(u8);
+impl Display for Seconds {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum PingResponse {
