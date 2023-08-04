@@ -61,13 +61,13 @@ impl Target {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Milliseconds(u16);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Seconds(u8);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum PingResponse {
     Time(Milliseconds),
     Timeout,
@@ -134,5 +134,63 @@ impl TryFrom<&str> for PingResponse {
         } else {
             bail!("Failed to convert value into PingResponse. Did not match pass nor fail. Value: {value:?}");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ping_response_time() {
+        // Arrange
+        let expected = PingResponse::Time(5.into());
+        let input = "PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=5.32 ms
+
+--- 8.8.8.8 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 5.315/5.315/5.315/0.000 ms";
+
+        // Act
+        let actual: PingResponse = input.try_into().unwrap();
+
+        // Assert
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn ping_response_timeout() {
+        // Arrange
+        let expected = PingResponse::Timeout;
+        let input = "PING 192.8.8.8 (192.8.8.8) 56(84) bytes of data.
+
+--- 192.8.8.8 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms";
+
+        // Act
+        let actual: PingResponse = input.try_into().unwrap();
+
+        // Assert
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn ping_response_error() {
+        // Arrange
+        let expected = PingResponse::Error {
+            msg: "From 192.168.1.2 icmp_seq=1 Destination Host Unreachable".into(),
+        };
+        let input = "PING 192.168.1.205 (192.168.1.205) 56(84) bytes of data.
+From 192.168.1.2 icmp_seq=1 Destination Host Unreachable
+
+--- 192.168.1.205 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms";
+
+        // Act
+        let actual: PingResponse = input.try_into().unwrap();
+
+        // Assert
+        assert_eq!(actual, expected);
     }
 }
