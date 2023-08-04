@@ -139,6 +139,8 @@ impl TryFrom<&str> for PingResponse {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use super::*;
 
     #[test]
@@ -191,6 +193,16 @@ From 192.168.1.2 icmp_seq=1 Destination Host Unreachable
         let actual: PingResponse = input.try_into().unwrap();
 
         // Assert
+        assert_eq!(actual, expected);
+    }
+
+    #[rstest]
+    #[case("8", "00", Milliseconds(8))]
+    #[case("8", "49", Milliseconds(8))]
+    #[case("8", "50", Milliseconds(9))]
+    #[case("8", "99", Milliseconds(9))]
+    fn milliseconds(#[case] ms: &str, #[case] ms_frac: &str, #[case] expected: Milliseconds) {
+        let actual = Milliseconds::try_from((ms, ms_frac)).unwrap();
         assert_eq!(actual, expected);
     }
 }
