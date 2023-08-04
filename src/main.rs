@@ -29,16 +29,6 @@ fn init_logging(level: LevelFilter) -> anyhow::Result<()> {
 
 /// Finds the round trip time to the target if less than timeout
 fn ping(target: &Target) -> anyhow::Result<PingResponse> {
-    static CELL_PASS: OnceLock<Regex> = OnceLock::new();
-    static CELL_FAIL: OnceLock<Regex> = OnceLock::new();
-    let re_pass = CELL_PASS.get_or_init(|| {
-        debug!("Compile regex for passing ping responses");
-        Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.(\d+) ms").expect("Failed to compile regex")
-    });
-    let re_fail = CELL_FAIL.get_or_init(|| {
-        Regex::new(r"bytes of data.\n(?:(.*)\n)?\n---.*\n1 packets transmitted, 0 received")
-            .expect("Failed to compile regex")
-    });
     let output = Command::new("ping")
         .arg("-c")
         .arg("1")
@@ -54,25 +44,7 @@ fn ping(target: &Target) -> anyhow::Result<PingResponse> {
         warn!("Pinging {target:?} stderr not empty: {stderr:?}");
     }
 
-    if let Some(captures) = re_pass.captures(stdout) {
-        // Regex matched and can only match if both capture groups are found as they are not optional
-        let ms = captures.get(1).unwrap();
-        let ms_frac = captures.get(2).unwrap();
-
-        Ok(PingResponse::Time(Milliseconds::try_from((
-            ms.as_str(),
-            ms_frac.as_str(),
-        ))?))
-    } else if let Some(captures) = re_fail.captures(stdout) {
-        match captures.get(1) {
-            Some(error_msg) => Ok(PingResponse::Error {
-                msg: error_msg.as_str().to_owned(),
-            }),
-            None => Ok(PingResponse::Timeout),
-        }
-    } else {
-        bail!("stdout did not match pass nor fail. stdout: {stdout:?}");
-    }
+    stdout.try_into()
 }
 
 #[derive(Debug)]
@@ -124,5 +96,43 @@ impl TryFrom<(&str, &str)> for Milliseconds {
             ms += 1;
         }
         Ok(Self(ms))
+    }
+}
+
+impl TryFrom<&str> for PingResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> anyhow::Result<Self> {
+        static CELL_PASS: OnceLock<Regex> = OnceLock::new();
+        static CELL_FAIL: OnceLock<Regex> = OnceLock::new();
+        let re_pass = CELL_PASS.get_or_init(|| {
+            debug!("Compile regex for passing ping responses");
+            Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.(\d+) ms")
+                .expect("Failed to compile regex")
+        });
+        let re_fail = CELL_FAIL.get_or_init(|| {
+            Regex::new(r"bytes of data.\n(?:(.*)\n)?\n---.*\n1 packets transmitted, 0 received")
+                .expect("Failed to compile regex")
+        });
+
+        if let Some(captures) = re_pass.captures(value) {
+            // Regex matched and can only match if both capture groups are found as they are not optional
+            let ms = captures.get(1).unwrap();
+            let ms_frac = captures.get(2).unwrap();
+
+            Ok(PingResponse::Time(Milliseconds::try_from((
+                ms.as_str(),
+                ms_frac.as_str(),
+            ))?))
+        } else if let Some(captures) = re_fail.captures(value) {
+            match captures.get(1) {
+                Some(error_msg) => Ok(PingResponse::Error {
+                    msg: error_msg.as_str().to_owned(),
+                }),
+                None => Ok(PingResponse::Timeout),
+            }
+        } else {
+            bail!("Failed to convert value into PingResponse. Did not match pass nor fail. Value: {value:?}");
+        }
     }
 }
