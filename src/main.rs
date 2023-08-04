@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{process::Command, sync::OnceLock};
 
 use anyhow::{bail, Context};
 use regex::Regex;
@@ -21,12 +21,15 @@ fn main() -> anyhow::Result<()> {
 
 /// Finds the round trip time to the target if less than timeout
 fn ping(target: &Target) -> anyhow::Result<PingResponse> {
-    // TODO Make regex only get compiled once
-    let re_pass =
-        Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.(\d+) ms").expect("Failed to compile regex");
-    let re_fail =
+    static CELL_PASS: OnceLock<Regex> = OnceLock::new();
+    static CELL_FAIL: OnceLock<Regex> = OnceLock::new();
+    let re_pass = CELL_PASS.get_or_init(|| {
+        Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.(\d+) ms").expect("Failed to compile regex")
+    });
+    let re_fail = CELL_FAIL.get_or_init(|| {
         Regex::new(r"bytes of data.\n(?:(.*)\n)?\n---.*\n1 packets transmitted, 0 received")
-            .expect("Failed to compile regex");
+            .expect("Failed to compile regex")
+    });
     let output = Command::new("ping")
         .arg("-c")
         .arg("1")
