@@ -15,7 +15,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
     for target in config.targets.iter() {
-        let result = ping(target);
+        let result = ping(target, &config.default_timeout);
         let _ = dbg!(result);
         println!("-----");
     }

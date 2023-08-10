@@ -7,15 +7,19 @@ use std::{process::Command, sync::OnceLock};
 use crate::{Milliseconds, Seconds};
 
 /// Finds the round trip time to the target if less than timeout
-pub fn ping(target: &Target) -> anyhow::Result<PingResponse> {
+pub fn ping(target: &Target, default_timeout: &Seconds) -> anyhow::Result<PingResponse> {
     let mut cmd = Command::new("ping");
     cmd.arg("-c").arg("1");
 
+    // Set timeout
+    cmd.arg("-W");
     match &target.timeout {
         Some(duration) => {
-            cmd.arg("-W").arg(duration.to_string());
+            cmd.arg(duration.to_string());
         }
-        None => (), // TODO Once we have global settings we need to check those for a value
+        None => {
+            cmd.arg(default_timeout.to_string());
+        }
     }
 
     let output = cmd
