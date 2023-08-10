@@ -5,7 +5,7 @@ use log::LevelFilter;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    init_logging(LevelFilter::Debug)?;
+    init_logging(cli.log_level.into())?;
     run(cli)?;
     Ok(())
 }
