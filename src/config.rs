@@ -31,7 +31,7 @@ impl Config {
     }
 
     fn default_timeout() -> Seconds {
-        1.into()
+        3.into()
     }
 
     fn default_ping_repeat_freq() -> Seconds {
