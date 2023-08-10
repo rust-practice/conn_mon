@@ -8,7 +8,7 @@ pub(crate) use units::{Milliseconds, Seconds};
 
 use crate::ping::Target;
 
-pub fn run(cli: Cli) -> anyhow::Result<()> {
+pub fn run(_cli: Cli) -> anyhow::Result<()> {
     let targets = vec![
         Target::new("127.0.0.1".to_string(), None),
         Target::new("8.8.8.8".to_string(), None),
