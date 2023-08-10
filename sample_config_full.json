@@ -1,0 +1,21 @@
+{
+    "targets": [
+        {
+            "host": "127.0.0.1",
+            "display_name": null,
+            "timeout": null
+        },
+        {
+            "host": "8.8.8.8",
+            "display_name": "Google DNS",
+            "timeout": null
+        },
+        {
+            "host": "google.com",
+            "display_name": null,
+            "timeout": 10
+        }
+    ],
+    "default_timeout": 1,
+    "ping_repeat_freq": 5
+}
