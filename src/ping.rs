@@ -1,6 +1,7 @@
 use anyhow::{bail, Context};
 use log::{debug, warn};
 use regex::Regex;
+use serde::Deserialize;
 use std::{process::Command, sync::OnceLock};
 
 use crate::{Milliseconds, Seconds};
@@ -33,7 +34,7 @@ pub fn ping(target: &Target) -> anyhow::Result<PingResponse> {
     stdout.try_into()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Target {
     /// The argument to be used when sending the ping request
     pub host: String,
