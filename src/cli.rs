@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, ValueEnum};
 use log::LevelFilter;
 
@@ -10,12 +12,20 @@ use log::LevelFilter;
 )]
 pub struct Cli {
     /// Specify config file to use
+    ///
+    /// If not specified uses `.config/<app_name>` in users home folder
     #[arg(long, short, value_name = "PATH")]
     pub config: Option<String>,
 
     /// Set logging level to use
     #[arg(long, short, value_enum, default_value_t = LogLevel::Info)]
     pub log_level: LogLevel,
+}
+
+impl Cli {
+    pub fn get_config_path(&self) -> PathBuf {
+        todo!()
+    }
 }
 
 /// Exists to provide better help messages variants copied from LevelFilter as
