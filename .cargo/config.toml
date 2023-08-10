@@ -1,0 +1,3 @@
+[alias]
+# Runs the minimal sample config file
+r = "run -- -c sample_config_minimal.json"

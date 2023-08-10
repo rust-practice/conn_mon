@@ -3,6 +3,22 @@
  A program to monitor the quality of a connection.
  
  NB: Only supports Linux right now.
+ 
+ ## Usage Examples
+ 
+ Run with `config.json` in current working directory
+ 
+ ```
+ cargo run -- -c sample_config_full.json
+ ```
+ 
+ Run with full sample config
+ 
+A cargo alias has been added to simplify running using the minimal sample config file
+
+```sh
+cargo r
+```
 
 ## License
 
