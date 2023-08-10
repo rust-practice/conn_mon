@@ -14,8 +14,8 @@ pub struct Cli {
     /// Specify config file to use
     ///
     /// If not specified uses `.config/<app_name>` in users home folder
-    #[arg(long, short, value_name = "PATH")]
-    pub config: Option<String>,
+    #[arg(long = "config", short, value_name = "PATH")]
+    pub config_filename: Option<String>,
 
     /// Set logging level to use
     #[arg(long, short, value_enum, default_value_t = LogLevel::Info)]
@@ -24,7 +24,10 @@ pub struct Cli {
 
 impl Cli {
     pub fn get_config_path(&self) -> PathBuf {
-        todo!()
+        match self.config_filename.as_ref() {
+            Some(val) => PathBuf::from(val),
+            None => PathBuf::from("config.json"),
+        }
     }
 }
 
