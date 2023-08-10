@@ -10,10 +10,10 @@ use crate::ping::Target;
 
 pub fn run(_cli: Cli) -> anyhow::Result<()> {
     let targets = vec![
-        Target::new("127.0.0.1".to_string(), None),
-        Target::new("8.8.8.8".to_string(), None),
-        Target::new("192.168.1.205".to_string(), Some(10.into())),
-        Target::new("192.168.8.8".to_string(), Some(1.into())),
+        Target::new("127.0.0.1".to_string()),
+        Target::new("8.8.8.8".to_string()),
+        Target::new("192.168.1.205".to_string()),
+        Target::new("192.168.8.8".to_string()),
     ];
 
     for target in targets {

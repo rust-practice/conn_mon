@@ -35,15 +35,23 @@ pub fn ping(target: &Target) -> anyhow::Result<PingResponse> {
 
 #[derive(Debug)]
 pub struct Target {
-    host: String,
+    /// The argument to be used when sending the ping request
+    pub host: String,
+
+    /// Value to be used when referring to this host in a user facing context
+    pub display_name: Option<String>,
 
     /// If supplied overrides the global default timeout for waiting for a response
-    timeout: Option<Seconds>,
+    pub timeout: Option<Seconds>,
 }
 
 impl Target {
-    pub fn new(host: String, timeout: Option<Seconds>) -> Self {
-        Self { host, timeout }
+    pub fn new(host: String) -> Self {
+        Self {
+            host,
+            display_name: None,
+            timeout: None,
+        }
     }
 }
 
