@@ -1,6 +1,8 @@
 ## conn_mon - Connection Monitor Tool
 
- A program to monitor the quality of a connection
+ A program to monitor the quality of a connection.
+ 
+ NB: Only supports Linux right now.
 
 ## License
 
