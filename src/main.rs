@@ -10,7 +10,7 @@ fn main() -> anyhow::Result<()> {
     let targets = vec![
         Target::new("127.0.0.1".to_string(), None),
         Target::new("8.8.8.8".to_string(), None),
-        Target::new("192.168.1.205".to_string(), None),
+        Target::new("192.168.1.205".to_string(), Some(10.into())),
         Target::new("192.168.8.8".to_string(), Some(1.into())),
     ];
 
@@ -35,7 +35,7 @@ fn ping(target: &Target) -> anyhow::Result<PingResponse> {
 
     match &target.timeout {
         Some(duration) => {
-            cmd.arg("-w").arg(duration.to_string());
+            cmd.arg("-W").arg(duration.to_string());
         }
         None => (), // TODO Once we have global settings we need to check those for a value
     }
