@@ -105,7 +105,7 @@ impl TryFrom<(&str, &str)> for Milliseconds {
 
     fn try_from((ms, ms_frac): (&str, &str)) -> Result<Self, Self::Error> {
         let mut ms: u16 = ms.parse().context("Failed to parse ms in ping")?;
-        let ms_frac: u16 = ms_frac.parse().context("Failed to parse ms in ping")?;
+        let ms_frac: u16 = ms_frac.parse().context("Failed to parse ms_frac in ping")?;
         if ms_frac >= 50 {
             ms += 1;
         }
