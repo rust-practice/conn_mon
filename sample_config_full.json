@@ -14,8 +14,18 @@
             "host": "google.com",
             "display_name": null,
             "timeout": 10
+        },
+        {
+            "host": "192.168.1.205",
+            "display_name": "Local but not alive (replay from localhost)",
+            "timeout": null
+        },
+        {
+            "host": "192.168.8.8",
+            "display_name": "Local but not your local (timeout)",
+            "timeout": null
         }
     ],
-    "default_timeout": 1,
+    "default_timeout": 3,
     "ping_repeat_freq": 5
 }
