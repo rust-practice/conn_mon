@@ -14,12 +14,13 @@ pub use cli::Cli;
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
+    // TODO: Start up a thread for each host then await the threads
     for target in config.targets.iter() {
         dbg!(target);
         let result = ping(target, &config.default_timeout);
         let _ = dbg!(result);
         println!("----------------------------------------------");
     }
-    println!("Completed");
+    println!("All shutdown");
     Ok(())
 }
