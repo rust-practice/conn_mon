@@ -60,18 +60,14 @@ impl TargetHandler {
             Err(err_new) => {
                 // Try to open for append otherwise report both errors
                 match File::options().append(true).open(&path) {
-                    Ok(file) => {                        
-                               debug!("File opened with append for {path:?}");
-        file
+                    Ok(file) => {
+                        debug!("File opened with append for {path:?}");
+                        file
                     },
                     Err(err_append) => bail!("Unable to open {path:?} as new file with error: {err_new} nor as append with error: {err_append}"),
                 }
             }
         };
-        
-        
-        
-        
 
         Ok(result)
     }
