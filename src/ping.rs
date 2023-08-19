@@ -2,7 +2,7 @@ use anyhow::{bail, Context};
 use log::{debug, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::{process::Command, sync::OnceLock};
+use std::{fmt::Display, process::Command, sync::OnceLock};
 
 use crate::{Milliseconds, Seconds};
 
@@ -63,6 +63,12 @@ impl From<String> for Target {
             display_name: None,
             timeout: None,
         }
+    }
+}
+
+impl Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display_name.as_ref().unwrap_or(&self.host))
     }
 }
 
