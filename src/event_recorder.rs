@@ -1,6 +1,10 @@
-use std::{collections::HashMap, fs::File};
+use std::{
+    collections::HashMap,
+    fs::{create_dir_all, File},
+    path::Path,
+};
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use chrono::Local;
 use log::debug;
 
@@ -34,12 +38,42 @@ impl TargetHandler {
     }
 
     fn create_file_handle(
-        file_identifier: &str,
+        host_identifier: &str,
         time_sensitive_part_of_filename: &str,
     ) -> anyhow::Result<File> {
-        let new_filename = todo!();
+        let base_folder = "events";
+        let new_filename = format!(
+            "{} {} events.log",
+            time_sensitive_part_of_filename, host_identifier
+        );
         debug!("Creating new file handle for {new_filename:?}");
-        todo!()
+
+        let path = Path::new(base_folder);
+        create_dir_all(path).context("Failed to create base directory for events")?;
+
+        let path = path.join(new_filename);
+        let result = match File::options().write(true).create_new(true).open(&path) {
+            Ok(file) => {
+                debug!("File created new for {path:?}");
+                file
+            }
+            Err(err_new) => {
+                // Try to open for append otherwise report both errors
+                match File::options().append(true).open(&path) {
+                    Ok(file) => {                        
+                               debug!("File opened with append for {path:?}");
+        file
+                    },
+                    Err(err_append) => bail!("Unable to open {path:?} as new file with error: {err_new} nor as append with error: {err_append}"),
+                }
+            }
+        };
+        
+        
+        
+        
+
+        Ok(result)
     }
 
     fn create_time_part_for_filename() -> String {
