@@ -102,12 +102,12 @@ impl TargetID {
 }
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
-pub struct EventManager {
+pub struct EventSubscriber {
     target_map: HashMap<TargetID, TargetHandler>,
     next_id: TargetID,
 }
 
-impl EventManager {
+impl EventSubscriber {
     pub fn new() -> Self {
         debug!("New event manager being created");
         Self {

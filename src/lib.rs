@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod event_recorder;
 mod ping;
+mod state_management;
 mod units;
 
 use std::{
@@ -9,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-use crate::event_recorder::EventManager;
+use crate::event_recorder::EventSubscriber;
 pub(crate) use crate::{
     config::Config,
     ping::{ping, Target},
@@ -18,13 +19,14 @@ pub(crate) use crate::{
 use anyhow::Context;
 pub use cli::Cli;
 use log::{error, info, trace};
+use state_management::EventPublisher;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
     // TODO Create channel and give receiver to manager and a sender to each thread created
 
-    let mut event_manager = EventManager::new();
+    let mut event_manager = EventSubscriber::new();
 
     let mut thread_handles = vec![];
 
@@ -34,16 +36,16 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         let target_id = event_manager
             .register_target(target)
             .with_context(|| format!("Failed to register target: {target}"))?;
-        let thread_handle = start_ping_thread(target_id, target, &config);
+        let thread_handle = start_ping_thread(target_id, target, &config)?;
         thread_handles.push(thread_handle);
     }
 
-    // TODO Await threads
+    // Await threads (I think it will only check if a thread failed one at a time, not suitable for long term use)
     for (i, x) in thread_handles.into_iter().enumerate() {
         match x.join() {
             Ok(_) => info!("Thread for {} shutdown successfully.", config.targets[i]),
             Err(e) => error!(
-                "Error shutting down thread: {} Message{e:?}",
+                "Thread for {} Panicked with Message: {e:?}",
                 config.targets[i]
             ),
         };
@@ -57,13 +59,21 @@ fn start_ping_thread(
     target_id: event_recorder::TargetID,
     target: &Target,
     config: &Config,
-) -> JoinHandle<()> {
+) -> anyhow::Result<JoinHandle<()>> {
     let default_timeout = config.default_timeout;
     let target: Target = (*target).clone();
     let time_between_pings = config.ping_repeat_freq.into();
-    thread::spawn(move || loop {
-        let response = ping(&target, &default_timeout);
-        trace!("Response for {target} was {response:?}");
-        thread::sleep(Duration::from_secs(time_between_pings))
-    })
+    let result = thread::Builder::new()
+        .name(format!("{target}"))
+        .spawn(move || {
+            let mut publisher = EventPublisher::new();
+            loop {
+                let response = ping(&target, &default_timeout);
+                trace!("Response for {target} was {response:?}");
+                publisher.process_response(response);
+                thread::sleep(Duration::from_secs(time_between_pings))
+            }
+        })
+        .context("Failed to start thread")?;
+    Ok(result)
 }
