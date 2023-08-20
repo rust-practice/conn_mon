@@ -38,7 +38,7 @@ pub fn ping(target: &Target, default_timeout: &Seconds) -> anyhow::Result<PingRe
     stdout.try_into()
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Target {
     /// The argument to be used when sending the ping request
     pub host: String,
@@ -86,7 +86,7 @@ impl TryFrom<&str> for PingResponse {
         static CELL_PASS: OnceLock<Regex> = OnceLock::new();
         static CELL_FAIL: OnceLock<Regex> = OnceLock::new();
         let re_pass = CELL_PASS.get_or_init(|| {
-            debug!("Compile regex for passing ping responses");
+            debug!("Compile regex for parsing ping responses");
             Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.(\d+) ms")
                 .expect("Failed to compile regex")
         });
