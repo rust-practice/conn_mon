@@ -4,6 +4,7 @@ mod event_recorder;
 mod ping;
 mod state_management;
 mod units;
+mod utils;
 
 use std::{
     sync::mpsc::{self, Sender},

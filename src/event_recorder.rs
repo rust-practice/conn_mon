@@ -1,28 +1,41 @@
 use std::{
     collections::HashMap,
+    fmt::Display,
     fs::{create_dir_all, File},
-    path::Path,
+    io::Write,
+    path::{Path, PathBuf},
     sync::mpsc::Receiver,
+    time::Instant,
 };
 
 use anyhow::{bail, Context};
-use chrono::Local;
-use log::debug;
+use chrono::{DateTime, Local};
+use log::{debug, trace};
+use serde_json::json;
 
 use crate::{
     config::Config,
     ping::{PingResponse, Target},
     state_management::MonitorState,
+    utils::make_single_line,
 };
+
+#[derive(Debug)]
+pub struct TimestampedResponse {
+    timestamp: Timestamp,
+    response: PingResponse,
+}
 
 #[derive(Debug)]
 /// Manages a target, tracking things like where to write the info to disk and what is pending being written
 pub struct TargetHandler<'a> {
     file_identifier: String,
-    pending_for_file: Vec<PingResponse>,
+    pending_for_file: Vec<TimestampedResponse>,
     file_handle: File,
+    file_path: PathBuf,
     time_sensitive_part_of_filename: String,
     state: MonitorState,
+    last_write_to_disk_time: Option<Instant>,
     config: &'a Config,
 }
 
@@ -31,15 +44,17 @@ impl<'a> TargetHandler<'a> {
         debug!("Creating new TargetHandler for: {target}");
         let file_identifier = target.host.clone();
         let time_sensitive_part_of_filename = Self::create_time_part_for_filename();
-        let file_handle =
+        let (file_path, file_handle) =
             Self::create_file_handle(&file_identifier, &time_sensitive_part_of_filename)
                 .context("Failed creating file handle during TargetInfo initialization")?;
         let result = Self {
             file_identifier,
             pending_for_file: Default::default(),
             file_handle,
+            file_path,
             time_sensitive_part_of_filename,
             state: MonitorState::new(),
+            last_write_to_disk_time: None,
             config,
         };
         debug!("Succeeded in creating TargetHandler: {result:?}");
@@ -49,7 +64,7 @@ impl<'a> TargetHandler<'a> {
     fn create_file_handle(
         host_identifier: &str,
         time_sensitive_part_of_filename: &str,
-    ) -> anyhow::Result<File> {
+    ) -> anyhow::Result<(PathBuf, File)> {
         let base_folder = "events";
         let new_filename = format!(
             "{} {} events.log",
@@ -80,7 +95,7 @@ impl<'a> TargetHandler<'a> {
             }
         };
 
-        Ok(result)
+        Ok((path, result))
     }
 
     fn create_time_part_for_filename() -> String {
@@ -92,15 +107,17 @@ impl<'a> TargetHandler<'a> {
         let new_time_part = Self::create_time_part_for_filename();
         if self.time_sensitive_part_of_filename != new_time_part {
             debug!("Updating file handle for: {}", self.file_identifier);
-            let new_handle = Self::create_file_handle(&self.file_identifier, &new_time_part)
-                .context("Creating new file handle for update failed")?;
+            let (new_path, new_handle) =
+                Self::create_file_handle(&self.file_identifier, &new_time_part)
+                    .context("Creating new file handle for update failed")?;
             self.time_sensitive_part_of_filename = new_time_part;
             self.file_handle = new_handle;
+            self.file_path = new_path;
         }
         Ok(())
     }
 
-    fn receive_response(&mut self, response: PingResponse) -> anyhow::Result<()> {
+    fn receive_response(&mut self, response: TimestampedResponse) -> anyhow::Result<()> {
         let event = self.state.process_response(&response);
         if let Some(event) = event {
             todo!("Send event to another thread that handles sending out notifications")
@@ -112,7 +129,40 @@ impl<'a> TargetHandler<'a> {
     }
 
     fn write_to_file(&mut self) -> anyhow::Result<()> {
-        todo!()
+        let min_time_between_write = self.config.min_time_between_write;
+        if let Some(last) = self.last_write_to_disk_time {
+            if last.elapsed().as_secs() < min_time_between_write.into()
+                || self.pending_for_file.is_empty()
+            {
+                return Ok(()); // Do nothing enough time has not passed yet or nothing to write
+            }
+        }
+        trace!(
+            "{} has {} pending messages being written to disk at {:?}",
+            self.file_identifier,
+            self.pending_for_file.len(),
+            self.file_path
+        );
+
+        // Write all messages to disk
+        for response in self.pending_for_file.drain(..) {
+            writeln!(
+                self.file_handle,
+                "{}",
+                make_single_line(
+                    &json!({
+                        "timestamp": format!("{}",response.timestamp),
+                        "response": response.response
+                    })
+                    .to_string()
+                )
+            )
+            .with_context(|| format!("Failed to write to file: {}", self.file_identifier))?;
+        }
+        debug_assert!(self.pending_for_file.is_empty());
+
+        self.last_write_to_disk_time = Some(Instant::now());
+        Ok(())
     }
 }
 
@@ -126,14 +176,41 @@ impl TargetID {
 }
 
 #[derive(Debug)]
+pub struct Timestamp(DateTime<Local>);
+
+impl Timestamp {
+    pub fn new() -> Self {
+        Self(Local::now())
+    }
+}
+
+impl Display for Timestamp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.format("%F %T"))
+    }
+}
+
+#[derive(Debug)]
 pub struct ResponseMessage {
     id: TargetID,
+    timestamp: Timestamp,
     response: PingResponse,
 }
 
 impl ResponseMessage {
     pub fn new(id: TargetID, response: PingResponse) -> Self {
-        Self { id, response }
+        Self {
+            id,
+            timestamp: Timestamp::new(),
+            response,
+        }
+    }
+
+    fn into_response(self) -> TimestampedResponse {
+        TimestampedResponse {
+            timestamp: self.timestamp,
+            response: self.response,
+        }
     }
 }
 
@@ -174,7 +251,7 @@ impl<'a> ResponseManager<'a> {
                 .get_mut(&msg.id)
                 .expect("Failed to get handler for ID");
             handler
-                .receive_response(msg.response)
+                .receive_response(msg.into_response())
                 .expect("Failed to handle response");
         }
     }

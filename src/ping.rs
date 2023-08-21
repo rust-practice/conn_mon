@@ -94,7 +94,7 @@ impl Display for Target {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum PingResponse {
     Time(Milliseconds),
     Timeout,

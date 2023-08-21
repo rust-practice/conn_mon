@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use crate::units::Seconds;
+use crate::{event_recorder::TimestampedResponse, units::Seconds};
 
 #[derive(Debug)]
 pub struct MonitorState(State);
@@ -18,7 +18,7 @@ impl MonitorState {
     }
 
     /// Updates the state and fires and returns an event if applicable
-    pub fn process_response(&self, response: &crate::ping::PingResponse) -> Option<Event> {
+    pub fn process_response(&self, response: &TimestampedResponse) -> Option<Event> {
         // TODO Handle state updates
         None
     }
