@@ -10,22 +10,24 @@ use chrono::Local;
 use log::debug;
 
 use crate::{
+    config::Config,
     ping::{PingResponse, Target},
     state_management::MonitorState,
 };
 
 #[derive(Debug)]
 /// Manages a target, tracking things like where to write the info to disk and what is pending being written
-pub struct TargetHandler {
+pub struct TargetHandler<'a> {
     file_identifier: String,
     pending_for_file: Vec<PingResponse>,
     file_handle: File,
     time_sensitive_part_of_filename: String,
     state: MonitorState,
+    config: &'a Config,
 }
 
-impl TargetHandler {
-    fn new(target: &Target) -> anyhow::Result<Self> {
+impl<'a> TargetHandler<'a> {
+    fn new(target: &Target, config: &'a Config) -> anyhow::Result<Self> {
         debug!("Creating new TargetHandler for: {target}");
         let file_identifier = target.host.clone();
         let time_sensitive_part_of_filename = Self::create_time_part_for_filename();
@@ -38,6 +40,7 @@ impl TargetHandler {
             file_handle,
             time_sensitive_part_of_filename,
             state: MonitorState::new(),
+            config,
         };
         debug!("Succeeded in creating TargetHandler: {result:?}");
         Ok(result)
@@ -135,26 +138,29 @@ impl ResponseMessage {
 }
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
-pub struct ResponseManager {
+pub struct ResponseManager<'a> {
     rx: Receiver<ResponseMessage>,
-    target_map: HashMap<TargetID, TargetHandler>,
+    target_map: HashMap<TargetID, TargetHandler<'a>>,
     next_id: TargetID,
+    config: &'a Config,
 }
 
-impl ResponseManager {
-    pub fn new(rx: Receiver<ResponseMessage>) -> Self {
+impl<'a> ResponseManager<'a> {
+    pub fn new(rx: Receiver<ResponseMessage>, config: &'a Config) -> Self {
         debug!("New event manager being created");
         Self {
             rx,
             target_map: Default::default(),
             next_id: Default::default(),
+            config,
         }
     }
 
     pub fn register_target(&mut self, target: &Target) -> anyhow::Result<TargetID> {
         debug_assert!(!self.target_map.contains_key(&self.next_id));
         let result = self.next_id;
-        self.target_map.insert(result, TargetHandler::new(target)?);
+        self.target_map
+            .insert(result, TargetHandler::new(target, self.config)?);
         self.next_id = result.next(); // Update ID for next call
         Ok(result)
     }
