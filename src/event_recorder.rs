@@ -19,7 +19,7 @@ use crate::{
     config::Config,
     ping::{PingResponse, Target},
     state_management::{Event, MonitorState},
-    Discord,
+    Discord, Email,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -299,6 +299,13 @@ impl<'a> ResponseManager<'a> {
                 None
             }
         };
+        let email: Option<Email> = match Email::new() {
+            Ok(client) => Some(client),
+            Err(e) => {
+                error!("Unable to setup email. Email notifications will be disabled. {e}");
+                None
+            }
+        };
         thread::Builder::new()
             .name("EventDispatch".to_string())
             .spawn(move || loop {
@@ -311,7 +318,7 @@ impl<'a> ResponseManager<'a> {
                 let notification_message = format!("{timestamp} - {name} - {event}",);
                 let msg = &notification_message;
                 if !Self::send_via_discord(discord.as_ref(), msg)
-                    && !Self::send_via_email(todo!(), msg)
+                    && !Self::send_via_email(email.as_ref(), msg)
                 {
                     error!("Failed to send notification via andy means. Message was: {notification_message:?}");
                 }
@@ -340,7 +347,7 @@ impl<'a> ResponseManager<'a> {
 
     /// Attempts to send the message via email, if there is no email set or there is an error it returns false
     /// Not sure if a true is guaranteed message sent but at least we couldn't detect the error
-    fn send_via_email(email: Option<&()>, msg: &str) -> bool {
+    fn send_via_email(email: Option<&Email>, msg: &str) -> bool {
         todo!()
     }
 }
