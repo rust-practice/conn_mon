@@ -1,5 +1,9 @@
 ## conn_mon - Connection Monitor Tool
 
+Due to time constraints this project has been changed into a Proof of Concept (POC).
+Long term plan is to start a new project that interfaces with [Trippy](https://github.com/fujiapple852/trippy) to accomplish the original goals of this project.
+This is better because trippy is more feature rich and overall will result in a more robust and useful tool.
+
  A program to monitor the quality of a connection.
  
  NB: Only supports Linux right now.

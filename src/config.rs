@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Seconds, Target};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     /// Targets to ping
     pub targets: Vec<Target>,
@@ -17,7 +18,15 @@ pub struct Config {
 
     /// Frequency to Repeat Pings
     #[serde(default = "Config::default_ping_repeat_freq")]
-    pub ping_repeat_freq: Seconds, // TODO: Implement repeated pings
+    pub ping_repeat_freq: Seconds,
+
+    /// Minimum time between writing to the same file on disk
+    #[serde(default = "Config::default_min_time_between_write")]
+    pub min_time_between_write: Seconds,
+
+    /// Minimum time between writing to the same file on disk
+    #[serde(default = "Config::default_notify_remind_interval")]
+    pub notify_remind_interval: Seconds,
 }
 
 impl Config {
@@ -36,6 +45,14 @@ impl Config {
 
     fn default_ping_repeat_freq() -> Seconds {
         5.into()
+    }
+
+    fn default_min_time_between_write() -> Seconds {
+        60.into()
+    }
+
+    fn default_notify_remind_interval() -> Seconds {
+        1800.into()
     }
 }
 
