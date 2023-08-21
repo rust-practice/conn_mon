@@ -6,6 +6,7 @@ mod state_management;
 mod units;
 
 use std::{
+    sync::mpsc::{self, Sender},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -18,28 +19,33 @@ pub(crate) use crate::{
 };
 use anyhow::Context;
 pub use cli::Cli;
+use event_recorder::{EventMessage, TargetID};
 use log::trace;
 use state_management::EventPublisher;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
-    // TODO Create channel and give receiver to manager and a sender to each thread created
+    let (tx, rx) = mpsc::channel();
+    let mut event_manager = EventSubscriber::new(rx);
 
     // Start up a thread for each host then await the threads
     for target in config.targets.iter() {
         let target_id = event_manager
             .register_target(target)
             .with_context(|| format!("Failed to register target: {target}"))?;
-        start_ping_thread(target_id, target, &config)?;
+        start_ping_thread(target_id, target, tx.clone(), &config)?;
     }
+
+    event_manager.start_receive_loop();
 
     unreachable!("Should block on receive loop")
 }
 
 fn start_ping_thread(
-    target_id: event_recorder::TargetID,
+    target_id: TargetID,
     target: &Target,
+    tx: Sender<EventMessage>,
     config: &Config,
 ) -> anyhow::Result<JoinHandle<()>> {
     let default_timeout = config.default_timeout;
@@ -48,7 +54,7 @@ fn start_ping_thread(
     let result = thread::Builder::new()
         .name(format!("{target}"))
         .spawn(move || {
-            let mut publisher = EventPublisher::new();
+            let mut publisher = EventPublisher::new(target_id, tx);
             loop {
                 let response = ping(&target, &default_timeout);
                 trace!("Response for {target} was {response:?}");

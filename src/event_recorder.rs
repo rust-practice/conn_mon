@@ -138,14 +138,16 @@ impl EventMessage {
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
 pub struct EventSubscriber {
+    rx: Receiver<EventMessage>,
     target_map: HashMap<TargetID, TargetHandler>,
     next_id: TargetID,
 }
 
 impl EventSubscriber {
-    pub fn new() -> Self {
+    pub fn new(rx: Receiver<EventMessage>) -> Self {
         debug!("New event manager being created");
         Self {
+            rx,
             target_map: Default::default(),
             next_id: Default::default(),
         }
@@ -157,5 +159,10 @@ impl EventSubscriber {
         self.target_map.insert(result, TargetHandler::new(target)?);
         self.next_id = result.next(); // Update ID for next call
         Ok(result)
+    }
+
+    /// Blocks forever receiving messages from ping threads
+    pub fn start_receive_loop(&mut self) {
+        todo!()
     }
 }
