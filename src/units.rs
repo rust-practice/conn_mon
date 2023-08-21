@@ -8,9 +8,26 @@ pub struct Milliseconds(u64);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Clone, Copy)]
 pub struct Seconds(u64);
+
+impl Seconds {
+    pub(crate) fn as_u64(&self) -> u64 {
+        self.0
+    }
+}
+
 impl Display for Seconds {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        let mut seconds = self.as_u64();
+        let seconds_per_minute = 60;
+        let seconds_per_hour = seconds_per_minute * 60;
+        let seconds_per_day = seconds_per_hour * 24;
+        let days = seconds / seconds_per_day;
+        seconds -= days * seconds_per_day;
+        let hours = seconds / seconds_per_hour;
+        seconds -= hours * seconds_per_hour;
+        let minutes = seconds / seconds_per_minute;
+        seconds -= minutes * seconds_per_minute;
+        write!(f, "{days} days {hours}:{minutes}:{seconds}")
     }
 }
 

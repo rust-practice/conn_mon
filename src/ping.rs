@@ -15,10 +15,10 @@ pub fn ping(target: &Target, default_timeout: &Seconds) -> PingResponse {
     cmd.arg("-W");
     match &target.timeout {
         Some(duration) => {
-            cmd.arg(duration.to_string());
+            cmd.arg(duration.as_u64().to_string());
         }
         None => {
-            cmd.arg(default_timeout.to_string());
+            cmd.arg(default_timeout.as_u64().to_string());
         }
     }
 
