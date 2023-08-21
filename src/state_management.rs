@@ -8,7 +8,7 @@ impl EventPublisher {
         Self {}
     }
 
-    pub fn process_response(&mut self, response: anyhow::Result<PingResponse>) {
+    pub fn process_response(&mut self, response: PingResponse) {
         todo!()
     }
 }

@@ -1,4 +1,4 @@
-use anyhow::{bail, Context};
+use anyhow::bail;
 use log::{debug, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use std::{fmt::Display, process::Command, sync::OnceLock};
 use crate::{Milliseconds, Seconds};
 
 /// Finds the round trip time to the target if less than timeout
-pub fn ping(target: &Target, default_timeout: &Seconds) -> anyhow::Result<PingResponse> {
+pub fn ping(target: &Target, default_timeout: &Seconds) -> PingResponse {
     let mut cmd = Command::new("ping");
     cmd.arg("-c").arg("1");
 
@@ -22,20 +22,42 @@ pub fn ping(target: &Target, default_timeout: &Seconds) -> anyhow::Result<PingRe
         }
     }
 
-    let output = cmd
-        .arg(&target.host)
-        .output()
-        .context("Failed to execute ping")?;
-    let stdout = std::str::from_utf8(&output.stdout).context("Failed to convert stdout to ut8")?;
+    let output = match cmd.arg(&target.host).output() {
+        Ok(out) => out,
+        Err(e) => {
+            return PingResponse::ErrorOS {
+                msg: format!("Failed to execute ping: {e}"),
+            }
+        }
+    };
+    let stdout = match std::str::from_utf8(&output.stdout) {
+        Ok(out) => out,
+        Err(e) => {
+            return PingResponse::ErrorOS {
+                msg: format!("Failed to convert stdout to ut8: {e}"),
+            }
+        }
+    };
 
     // Check if stderr is not empty
     if !output.stderr.is_empty() {
-        let stderr =
-            std::str::from_utf8(&output.stderr).context("Failed to convert stdout to ut8")?;
+        let stderr = match std::str::from_utf8(&output.stderr) {
+            Ok(out) => out,
+            Err(e) => {
+                return PingResponse::ErrorOS {
+                    msg: format!("Failed to convert stdout to ut8: {e}"),
+                }
+            }
+        };
         warn!("Pinging {target:?} stderr not empty: {stderr:?}");
     }
 
-    stdout.try_into()
+    match stdout.try_into() {
+        Ok(result) => result,
+        Err(e) => PingResponse::ErrorInternal {
+            msg: format!("{e}"),
+        },
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -76,7 +98,9 @@ impl Display for Target {
 pub enum PingResponse {
     Time(Milliseconds),
     Timeout,
-    Error { msg: String },
+    ErrorPing { msg: String },
+    ErrorOS { msg: String },
+    ErrorInternal { msg: String },
 }
 
 impl TryFrom<&str> for PingResponse {
@@ -106,7 +130,7 @@ impl TryFrom<&str> for PingResponse {
             ))?))
         } else if let Some(captures) = re_fail.captures(value) {
             match captures.get(1) {
-                Some(error_msg) => Ok(PingResponse::Error {
+                Some(error_msg) => Ok(PingResponse::ErrorPing {
                     msg: error_msg.as_str().to_owned(),
                 }),
                 None => Ok(PingResponse::Timeout),
@@ -158,7 +182,7 @@ rtt min/avg/max/mdev = 5.315/5.315/5.315/0.000 ms";
     #[test]
     fn ping_response_error() {
         // Arrange
-        let expected = PingResponse::Error {
+        let expected = PingResponse::ErrorPing {
             msg: "From 192.168.1.2 icmp_seq=1 Destination Host Unreachable".into(),
         };
         let input = "PING 192.168.1.205 (192.168.1.205) 56(84) bytes of data.
