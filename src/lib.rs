@@ -51,7 +51,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         };
     }
 
-    // TODO implement graceful shutdown (need to write what is pending to disk)
+    println!("Program Shutdown");
     Ok(())
 }
 
