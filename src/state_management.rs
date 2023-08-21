@@ -19,8 +19,7 @@ impl MonitorState {
 
     /// Updates the state and fires and returns an event if applicable
     pub fn process_response(&self, response: &TimestampedResponse) -> Option<Event> {
-        // TODO Handle state updates
-        None
+        todo!()
     }
 }
 

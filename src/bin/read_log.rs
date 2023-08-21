@@ -18,7 +18,6 @@ struct Cli {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    dbg!(&cli);
     for line in read_lines(&cli.log_filename)? {
         let line = line?;
         let res: TimestampedResponse = serde_json::from_str(&line)?;
