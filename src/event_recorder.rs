@@ -212,17 +212,17 @@ impl ResponseMessage {
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
 pub struct ResponseManager<'a> {
-    rx: Receiver<ResponseMessage>,
+    rx_ping_response: Receiver<ResponseMessage>,
     target_map: HashMap<TargetID, TargetHandler<'a>>,
     next_id: TargetID,
     config: &'a Config,
 }
 
 impl<'a> ResponseManager<'a> {
-    pub fn new(rx: Receiver<ResponseMessage>, config: &'a Config) -> Self {
+    pub fn new(rx_ping_response: Receiver<ResponseMessage>, config: &'a Config) -> Self {
         debug!("New event manager being created");
         Self {
-            rx,
+            rx_ping_response,
             target_map: Default::default(),
             next_id: Default::default(),
             config,
@@ -242,7 +242,7 @@ impl<'a> ResponseManager<'a> {
     pub fn start_receive_loop(&mut self) {
         trace!("Main Receive loop started for ping responses");
         loop {
-            let msg = self.rx.recv().expect("No Senders found");
+            let msg = self.rx_ping_response.recv().expect("No Senders found");
             let handler = self
                 .target_map
                 .get_mut(&msg.id)
