@@ -27,7 +27,7 @@ impl Display for Seconds {
         seconds -= hours * seconds_per_hour;
         let minutes = seconds / seconds_per_minute;
         seconds -= minutes * seconds_per_minute;
-        write!(f, "{days} days {hours}:{minutes}:{seconds}")
+        write!(f, "{days} days {hours:0>2}:{minutes:0>2}:{seconds:0>2}")
     }
 }
 
