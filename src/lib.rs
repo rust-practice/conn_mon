@@ -21,7 +21,7 @@ pub(crate) use crate::{
 use anyhow::Context;
 pub use cli::Cli;
 use event_recorder::{ResponseMessage, TargetID};
-use log::trace;
+use log::debug;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
@@ -56,7 +56,7 @@ fn start_ping_thread(
         .name(format!("{target}"))
         .spawn(move || loop {
             let response = ping(&target, &default_timeout);
-            trace!("Response for {target} was {response:?}");
+            debug!("Response for {target} was {response:?}");
             tx.send(ResponseMessage::new(target_id, response))
                 .expect("Failed to send response update");
             thread::sleep(Duration::from_secs(time_between_pings));

@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fmt::Display,
     fs::{create_dir_all, File},
     io::Write,
     path::{Path, PathBuf},
@@ -9,8 +8,9 @@ use std::{
 };
 
 use anyhow::{bail, Context};
-use chrono::{DateTime, Local};
+use chrono::Local;
 use log::{debug, trace};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
     utils::make_single_line,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TimestampedResponse {
     timestamp: Timestamp,
     response: PingResponse,
@@ -149,13 +149,7 @@ impl<'a> TargetHandler<'a> {
             writeln!(
                 self.file_handle,
                 "{}",
-                make_single_line(
-                    &json!({
-                        "timestamp": format!("{}",response.timestamp),
-                        "response": response.response
-                    })
-                    .to_string()
-                )
+                make_single_line(&json!(response).to_string())
             )
             .with_context(|| format!("Failed to write to file: {}", self.file_identifier))?;
         }
@@ -175,18 +169,12 @@ impl TargetID {
     }
 }
 
-#[derive(Debug)]
-pub struct Timestamp(DateTime<Local>);
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Timestamp(String);
 
 impl Timestamp {
     pub fn new() -> Self {
-        Self(Local::now())
-    }
-}
-
-impl Display for Timestamp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.format("%F %T"))
+        Self(format!("{}", Local::now().format("%F %T")))
     }
 }
 
@@ -244,6 +232,7 @@ impl<'a> ResponseManager<'a> {
 
     /// Blocks forever receiving messages from ping threads
     pub fn start_receive_loop(&mut self) {
+        trace!("Main Receive loop started for ping responses");
         loop {
             let msg = self.rx.recv().expect("No Senders found");
             let handler = self
