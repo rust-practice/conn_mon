@@ -11,6 +11,7 @@ use log::debug;
 
 use crate::{
     ping::{PingResponse, Target},
+    state_management::MonitorState,
     units::Seconds,
 };
 
@@ -21,6 +22,7 @@ pub struct TargetHandler {
     pending_events: Vec<Event>,
     file_handle: File,
     time_sensitive_part_of_filename: String,
+    state: MonitorState,
 }
 
 impl TargetHandler {
@@ -36,6 +38,7 @@ impl TargetHandler {
             pending_events: Default::default(),
             file_handle,
             time_sensitive_part_of_filename,
+            state: MonitorState::new(),
         };
         debug!("Succeeded in creating TargetHandler: {result:?}");
         Ok(result)
@@ -94,6 +97,11 @@ impl TargetHandler {
         }
         Ok(())
     }
+
+    fn receive_response(&mut self, response: PingResponse) {
+        todo!("Save Response");
+        todo!("Update State");
+    }
 }
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -105,46 +113,34 @@ impl TargetID {
     }
 }
 
-/// Ensure that the message fits on one line for easier parsing
-#[derive(Debug)]
-pub struct EventText {
-    msg: String,
-}
-
-impl EventText {
-    pub fn new(msg: String) -> Self {
-        todo!("Replace any new line characters in the message");
-        Self { msg }
-    }
-}
-
 #[derive(Debug)]
 pub enum Event {
-    ConnectionFailed(EventText),
+    ConnectionFailed(String),
+    ConnectionStillDown(Seconds),
     ConnectionRestoredAfter(Seconds),
-    Error(EventText),
+    Error(String),
 }
 
-pub struct EventMessage {
+pub struct ResponseMessage {
     id: TargetID,
-    event: Event,
+    response: PingResponse,
 }
 
-impl EventMessage {
-    pub fn new(id: TargetID, event: Event) -> Self {
-        Self { id, event }
+impl ResponseMessage {
+    pub fn new(id: TargetID, response: PingResponse) -> Self {
+        Self { id, response }
     }
 }
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
-pub struct EventSubscriber {
-    rx: Receiver<EventMessage>,
+pub struct ResponseManager {
+    rx: Receiver<ResponseMessage>,
     target_map: HashMap<TargetID, TargetHandler>,
     next_id: TargetID,
 }
 
-impl EventSubscriber {
-    pub fn new(rx: Receiver<EventMessage>) -> Self {
+impl ResponseManager {
+    pub fn new(rx: Receiver<ResponseMessage>) -> Self {
         debug!("New event manager being created");
         Self {
             rx,

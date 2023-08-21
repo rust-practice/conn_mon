@@ -11,7 +11,7 @@ use std::{
     time::Duration,
 };
 
-use crate::event_recorder::EventSubscriber;
+use crate::event_recorder::ResponseManager;
 pub(crate) use crate::{
     config::Config,
     ping::{ping, Target},
@@ -19,15 +19,14 @@ pub(crate) use crate::{
 };
 use anyhow::Context;
 pub use cli::Cli;
-use event_recorder::{EventMessage, TargetID};
+use event_recorder::{ResponseMessage, TargetID};
 use log::trace;
-use state_management::EventPublisher;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
     let (tx, rx) = mpsc::channel();
-    let mut event_manager = EventSubscriber::new(rx);
+    let mut event_manager = ResponseManager::new(rx);
 
     // Start up a thread for each host then await the threads
     for target in config.targets.iter() {
@@ -45,7 +44,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
 fn start_ping_thread(
     target_id: TargetID,
     target: &Target,
-    tx: Sender<EventMessage>,
+    tx: Sender<ResponseMessage>,
     config: &Config,
 ) -> anyhow::Result<JoinHandle<()>> {
     let default_timeout = config.default_timeout;
@@ -53,14 +52,12 @@ fn start_ping_thread(
     let time_between_pings = config.ping_repeat_freq.into();
     let result = thread::Builder::new()
         .name(format!("{target}"))
-        .spawn(move || {
-            let mut publisher = EventPublisher::new(target_id, tx);
-            loop {
-                let response = ping(&target, &default_timeout);
-                trace!("Response for {target} was {response:?}");
-                publisher.process_response(response);
-                thread::sleep(Duration::from_secs(time_between_pings))
-            }
+        .spawn(move || loop {
+            let response = ping(&target, &default_timeout);
+            trace!("Response for {target} was {response:?}");
+            tx.send(ResponseMessage::new(target_id, response))
+                .expect("Failed to send response update");
+            thread::sleep(Duration::from_secs(time_between_pings))
         })
         .context("Failed to start thread")?;
     Ok(result)
