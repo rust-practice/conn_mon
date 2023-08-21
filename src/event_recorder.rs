@@ -292,23 +292,55 @@ impl<'a> ResponseManager<'a> {
     }
 
     fn start_event_thread(rx: Receiver<EventMessage>) -> anyhow::Result<()> {
-        let discord = Discord::new()?; // TODO: Move into field
+        let discord: Option<Discord> = match Discord::new() {
+            Ok(d) => Some(d),
+            Err(e) => {
+                error!("Unable to setup discord. Discord notifications will be disabled. {e}");
+                None
+            }
+        };
         thread::Builder::new()
             .name("EventDispatch".to_string())
             .spawn(move || loop {
-                let msg = rx.recv().expect("Failed to receive event message");
+                let event_message = rx.recv().expect("Failed to receive event message");
                 let EventMessage {
                     host_disp_name: name,
                     timestamp,
                     event,
-                } = msg;
+                } = event_message;
                 let notification_message = format!("{timestamp} - {name} - {event}",);
-                if let Err(err) = discord.send(&notification_message) {
-                    // TODO Fallback to email
-                    error!("Failed to send message using discord: {err}")
-                };
+                let msg = &notification_message;
+                if !Self::send_via_discord(discord.as_ref(), msg)
+                    && !Self::send_via_email(todo!(), msg)
+                {
+                    error!("Failed to send notification via andy means. Message was: {notification_message:?}");
+                }
             })
             .context("Failed to start event loop thread")?;
         Ok(())
+    }
+
+    /// Attempts to send the message via discord, if there is no discord set or there is an error it returns false
+    /// Not sure if a true is guaranteed message sent but at least we couldn't detect the error
+    fn send_via_discord(discord: Option<&Discord>, msg: &str) -> bool {
+        match discord {
+            Some(discord) => match discord.send(msg) {
+                Ok(()) => true,
+                Err(e) => {
+                    error!("Failed to send message via discord: {e}");
+                    false
+                }
+            },
+            None => {
+                debug!("Discord not set. Message not sent via discord");
+                false
+            }
+        }
+    }
+
+    /// Attempts to send the message via email, if there is no email set or there is an error it returns false
+    /// Not sure if a true is guaranteed message sent but at least we couldn't detect the error
+    fn send_via_email(email: Option<&()>, msg: &str) -> bool {
+        todo!()
     }
 }
