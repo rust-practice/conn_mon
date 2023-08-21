@@ -16,7 +16,7 @@ enum State {
         start: Instant,
         last_notify: Instant,
     },
-    SysError {
+    SystemError {
         start: Instant,
         last_notify: Instant,
     },
@@ -30,7 +30,7 @@ impl State {
     }
 
     fn error_now() -> Self {
-        Self::SysError {
+        Self::SystemError {
             start: Instant::now(),
             last_notify: Instant::now(),
         }
@@ -82,10 +82,10 @@ impl MonitorState {
                     (notification, State::Down { start, last_notify })
                 }
                 PingResponse::ErrorOS { msg } | PingResponse::ErrorInternal { msg } => {
-                    (Some(Event::OsError(msg.clone())), State::error_now())
+                    (Some(Event::SystemError(msg.clone())), State::error_now())
                 }
             },
-            State::SysError { start, last_notify } => match ping_response {
+            State::SystemError { start, last_notify } => match ping_response {
                 PingResponse::Time(_ms) => (
                     Some(Event::ConnectionRestoredAfter(
                         start.elapsed().as_secs().into(),
@@ -107,7 +107,7 @@ impl MonitorState {
                     } else {
                         last_notify
                     };
-                    (notification, State::SysError { start, last_notify })
+                    (notification, State::SystemError { start, last_notify })
                 }
             },
         };
@@ -130,7 +130,10 @@ impl MonitorState {
     }
 
     fn new_os_error(msg: &str) -> (Option<Event>, State) {
-        (Some(Event::OsError(msg.to_string())), State::error_now())
+        (
+            Some(Event::SystemError(msg.to_string())),
+            State::error_now(),
+        )
     }
 }
 
@@ -141,5 +144,5 @@ pub enum Event {
     ConnectionStillDown(Seconds),
     ConnectionStillError(Seconds),
     ConnectionRestoredAfter(Seconds),
-    OsError(String),
+    SystemError(String),
 }
