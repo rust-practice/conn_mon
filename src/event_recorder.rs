@@ -236,17 +236,20 @@ pub struct ResponseManager<'a> {
 }
 
 impl<'a> ResponseManager<'a> {
-    pub fn new(rx_ping_response: Receiver<ResponseMessage>, config: &'a Config) -> Self {
+    pub fn new(
+        rx_ping_response: Receiver<ResponseMessage>,
+        config: &'a Config,
+    ) -> anyhow::Result<Self> {
         debug!("New event manager being created");
         let (tx_events, rx) = mpsc::channel();
-        Self::start_event_thread(rx);
-        Self {
+        Self::start_event_thread(rx)?;
+        Ok(Self {
             rx_ping_response,
             tx_events,
             target_map: Default::default(),
             next_id: Default::default(),
             config,
-        }
+        })
     }
 
     pub fn register_target(&mut self, target: &Target) -> anyhow::Result<TargetID> {

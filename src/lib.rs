@@ -28,18 +28,19 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
     let (tx, rx) = mpsc::channel();
-    let mut event_manager = ResponseManager::new(rx, &config);
+    let mut response_manager =
+        ResponseManager::new(rx, &config).context("Failed to start response manager")?;
 
     // Start up a thread for each host then await the threads
     for target in config.targets.iter() {
-        let target_id = event_manager
+        let target_id = response_manager
             .register_target(target)
             .with_context(|| format!("Failed to register target: {target}"))?;
         start_ping_thread(target_id, target, tx.clone(), &config)?;
     }
     drop(tx); // Drop last handle that is not used
 
-    event_manager.start_receive_loop();
+    response_manager.start_receive_loop();
 
     unreachable!("Should block on receive loop")
 }
