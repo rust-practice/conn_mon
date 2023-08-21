@@ -110,7 +110,7 @@ impl TryFrom<&str> for PingResponse {
         static CELL_PASS: OnceLock<Regex> = OnceLock::new();
         static CELL_FAIL: OnceLock<Regex> = OnceLock::new();
         let re_pass = CELL_PASS.get_or_init(|| {
-            debug!("Compile regex for parsing ping responses");
+            debug!("Compiling regex for parsing ping responses");
             Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.?(\d+)? ms")
                 .expect("Failed to compile regex")
         });
