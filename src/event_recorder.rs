@@ -270,9 +270,14 @@ impl<'a> ResponseManager<'a> {
                 .target_map
                 .get_mut(&msg.id)
                 .expect("Failed to get handler for ID");
-            handler
+            if let Some(event_msg) = handler
                 .receive_response(msg.into_response())
-                .expect("Failed to handle response");
+                .expect("Failed to handle response")
+            {
+                self.tx_events
+                    .send(event_msg)
+                    .expect("Failed to send event");
+            }
         }
     }
 
