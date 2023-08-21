@@ -1,5 +1,4 @@
 /target
 config.json
 /events
-d.data
-e.data
+/*.data
