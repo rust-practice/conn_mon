@@ -124,10 +124,7 @@ impl<'a> TargetHandler<'a> {
     ) -> anyhow::Result<Option<EventMessage>> {
         let event = self.state.process_response(&response);
         let result = if let Some(event) = event {
-            Some(EventMessage {
-                host_disp_name: self.host_disp_name.to_string(),
-                event,
-            })
+            Some(EventMessage::new(self.host_disp_name.to_string(), event))
         } else {
             None
         };
@@ -223,7 +220,18 @@ impl ResponseMessage {
 #[derive(Debug)]
 struct EventMessage {
     host_disp_name: String,
+    timestamp: Timestamp,
     event: Event,
+}
+
+impl EventMessage {
+    pub fn new(host_disp_name: String, event: Event) -> Self {
+        Self {
+            host_disp_name,
+            timestamp: Timestamp::new(),
+            event,
+        }
+    }
 }
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
@@ -287,8 +295,12 @@ impl<'a> ResponseManager<'a> {
             .spawn(move || loop {
                 let msg = rx.recv().expect("Failed to receive event message");
                 dbg!(&msg);
-                let name = msg.host_disp_name;
-                let notification_message = format!("{name:?} - {}", msg.event);
+                let EventMessage {
+                    host_disp_name: name,
+                    timestamp,
+                    event,
+                } = msg;
+                let notification_message = format!("{timestamp} - {name} - {event}",);
                 // TODO send message
                 println!("{notification_message}");
             })
