@@ -111,7 +111,7 @@ impl TryFrom<&str> for PingResponse {
         static CELL_FAIL: OnceLock<Regex> = OnceLock::new();
         let re_pass = CELL_PASS.get_or_init(|| {
             debug!("Compile regex for parsing ping responses");
-            Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.(\d+) ms")
+            Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.?(\d+)? ms")
                 .expect("Failed to compile regex")
         });
         let re_fail = CELL_FAIL.get_or_init(|| {
@@ -121,12 +121,16 @@ impl TryFrom<&str> for PingResponse {
 
         if let Some(captures) = re_pass.captures(value) {
             // Regex matched and can only match if both capture groups are found as they are not optional
-            let ms = captures.get(1).unwrap();
-            let ms_frac = captures.get(2).unwrap();
+            let ms = captures.get(1).unwrap(); // Required for match
+            let ms_frac = captures.get(2); // May not be present if value is 0
 
             Ok(PingResponse::Time(Milliseconds::try_from((
                 ms.as_str(),
-                ms_frac.as_str(),
+                if let Some(ms_frac) = ms_frac {
+                    ms_frac.as_str()
+                } else {
+                    "0"
+                },
             ))?))
         } else if let Some(captures) = re_fail.captures(value) {
             match captures.get(1) {
@@ -151,6 +155,24 @@ mod tests {
         let expected = PingResponse::Time(5.into());
         let input = "PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
 64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=5.32 ms
+
+--- 8.8.8.8 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 5.315/5.315/5.315/0.000 ms";
+
+        // Act
+        let actual: PingResponse = input.try_into().unwrap();
+
+        // Assert
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn ping_response_time_no_frac_ms() {
+        // Arrange
+        let expected = PingResponse::Time(5.into());
+        let input = "PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=5 ms
 
 --- 8.8.8.8 ping statistics ---
 1 packets transmitted, 1 received, 0% packet loss, time 0ms
