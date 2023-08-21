@@ -18,7 +18,6 @@ use crate::{
     config::Config,
     ping::{PingResponse, Target},
     state_management::MonitorState,
-    utils::make_single_line,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -147,12 +146,8 @@ impl<'a> TargetHandler<'a> {
 
         // Write all messages to disk
         for response in self.pending_for_file.drain(..) {
-            writeln!(
-                self.file_handle,
-                "{}",
-                make_single_line(&json!(response).to_string())
-            )
-            .with_context(|| format!("Failed to write to file: {}", self.file_identifier))?;
+            writeln!(self.file_handle, "{}", &json!(response).to_string())
+                .with_context(|| format!("Failed to write to file: {}", self.file_identifier))?;
         }
         debug_assert!(self.pending_for_file.is_empty());
 
