@@ -21,8 +21,7 @@ use anyhow::Context;
 use event_recorder::{ResponseMessage, TargetID};
 use log::debug;
 
-pub use cli::Cli;
-pub use event_recorder::TimestampedResponse;
+pub use crate::{cli::Cli, event_recorder::TimestampedResponse};
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;

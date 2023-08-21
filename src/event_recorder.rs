@@ -144,7 +144,7 @@ impl<'a> TargetHandler<'a> {
                 return Ok(()); // Do nothing enough time has not passed yet or nothing to write
             }
         }
-        trace!(
+        debug!(
             "{} has {} pending messages being written to disk at {:?}",
             self.host_disp_name,
             self.pending_for_file.len(),
@@ -271,7 +271,8 @@ impl<'a> ResponseManager<'a> {
 
     /// Blocks forever receiving messages from ping threads
     pub fn start_receive_loop(&mut self) {
-        trace!("Main Receive loop started for ping responses");
+        debug!("Main Receive loop started for ping responses");
+        // TODO Send a notification to say the monitor is online
         loop {
             let msg = self.rx_ping_response.recv().expect("No Senders found");
             let handler = self
