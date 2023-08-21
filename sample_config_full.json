@@ -27,5 +27,6 @@
         }
     ],
     "default_timeout": 3,
-    "ping_repeat_freq": 5
+    "ping_repeat_freq": 5,
+    "min_time_between_write": 60
 }
