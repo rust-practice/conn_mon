@@ -286,7 +286,29 @@ impl<'a> ResponseManager<'a> {
             .name("EventDispatch".to_string())
             .spawn(move || loop {
                 let msg = rx.recv().expect("Failed to receive event message");
-                dbg!(msg);
+                dbg!(&msg);
+                let name = msg.host_disp_name;
+                let notification_message = match msg.event {
+                    Event::ConnectionFailed => "Connection Failed".to_string(),
+                    Event::ConnectionError(err_msg) => {
+                        format!("Error connecting with message {err_msg:?}")
+                    }
+                    Event::ConnectionStillDown(duration) => {
+                        format!("Connection still down. Outage duration {duration}")
+                    }
+                    Event::ConnectionStillError(duration) => {
+                        format!("Connection still in error. Outage duration {duration}")
+                    }
+                    Event::ConnectionRestoredAfter(duration) => {
+                        format!("Connection Restored. Outage duration was {duration}")
+                    }
+                    Event::SystemError(err_msg) => {
+                        format!("System error with message {err_msg:?}")
+                    }
+                };
+                let notification_message = format!("{name:?} - {notification_message}");
+                // TODO send message
+                println!("{notification_message}");
             })
             .context("Failed to start event loop thread")?;
         Ok(())
