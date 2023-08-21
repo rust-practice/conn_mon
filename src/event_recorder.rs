@@ -12,14 +12,13 @@ use log::debug;
 use crate::{
     ping::{PingResponse, Target},
     state_management::MonitorState,
-    units::Seconds,
 };
 
 #[derive(Debug)]
 /// Manages a target, tracking things like where to write the info to disk and what is pending being written
 pub struct TargetHandler {
     file_identifier: String,
-    pending_events: Vec<Event>,
+    pending_for_file: Vec<PingResponse>,
     file_handle: File,
     time_sensitive_part_of_filename: String,
     state: MonitorState,
@@ -35,7 +34,7 @@ impl TargetHandler {
                 .context("Failed creating file handle during TargetInfo initialization")?;
         let result = Self {
             file_identifier,
-            pending_events: Default::default(),
+            pending_for_file: Default::default(),
             file_handle,
             time_sensitive_part_of_filename,
             state: MonitorState::new(),
@@ -98,9 +97,19 @@ impl TargetHandler {
         Ok(())
     }
 
-    fn receive_response(&mut self, response: PingResponse) {
-        todo!("Save Response");
-        todo!("Update State");
+    fn receive_response(&mut self, response: PingResponse) -> anyhow::Result<()> {
+        let event = self.state.process_response(&response);
+        if let Some(event) = event {
+            todo!("Send event to another thread that handles sending out notifications")
+        }
+        self.pending_for_file.push(response);
+        self.update_file_handle()
+            .context("Failed to update FileHandle")?;
+        self.write_to_file().context("Failed to write to file")
+    }
+
+    fn write_to_file(&mut self) -> anyhow::Result<()> {
+        todo!()
     }
 }
 
@@ -111,14 +120,6 @@ impl TargetID {
     fn next(&self) -> Self {
         Self(self.0 + 1)
     }
-}
-
-#[derive(Debug)]
-pub enum Event {
-    ConnectionFailed(String),
-    ConnectionStillDown(Seconds),
-    ConnectionRestoredAfter(Seconds),
-    Error(String),
 }
 
 #[derive(Debug)]
@@ -166,7 +167,9 @@ impl ResponseManager {
                 .target_map
                 .get_mut(&msg.id)
                 .expect("Failed to get handler for ID");
-            handler.receive_response(msg.response);
+            handler
+                .receive_response(msg.response)
+                .expect("Failed to handle response");
         }
     }
 }
