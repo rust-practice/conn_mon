@@ -18,7 +18,7 @@ pub struct Cli {
     pub config_filename: Option<String>,
 
     /// Set logging level to use
-    #[arg(long, short, value_enum, default_value_t = LogLevel::Info)]
+    #[arg(long, short, value_enum, default_value_t = LogLevel::Warn)]
     pub log_level: LogLevel,
 }
 
