@@ -2,19 +2,23 @@ use std::{
     collections::HashMap,
     fs::{create_dir_all, File},
     path::Path,
+    sync::mpsc::Receiver,
 };
 
 use anyhow::{bail, Context};
 use chrono::Local;
 use log::debug;
 
-use crate::ping::{PingResponse, Target};
+use crate::{
+    ping::{PingResponse, Target},
+    units::Seconds,
+};
 
 #[derive(Debug)]
 /// Manages a target, tracking things like where to write the info to disk and what is pending being written
 pub struct TargetHandler {
     file_identifier: String,
-    pending_events: Vec<PingResponse>,
+    pending_events: Vec<Event>,
     file_handle: File,
     time_sensitive_part_of_filename: String,
 }
@@ -98,6 +102,37 @@ pub struct TargetID(usize);
 impl TargetID {
     fn next(&self) -> Self {
         Self(self.0 + 1)
+    }
+}
+
+/// Ensure that the message fits on one line for easier parsing
+#[derive(Debug)]
+pub struct EventText {
+    msg: String,
+}
+
+impl EventText {
+    pub fn new(msg: String) -> Self {
+        todo!("Replace any new line characters in the message");
+        Self { msg }
+    }
+}
+
+#[derive(Debug)]
+pub enum Event {
+    ConnectionFailed(EventText),
+    ConnectionRestoredAfter(Seconds),
+    Error(EventText),
+}
+
+pub struct EventMessage {
+    id: TargetID,
+    event: Event,
+}
+
+impl EventMessage {
+    pub fn new(id: TargetID, event: Event) -> Self {
+        Self { id, event }
     }
 }
 
