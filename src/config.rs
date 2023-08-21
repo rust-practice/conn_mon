@@ -23,6 +23,10 @@ pub struct Config {
     /// Minimum time between writing to the same file on disk
     #[serde(default = "Config::default_min_time_between_write")]
     pub min_time_between_write: Seconds,
+
+    /// Minimum time between writing to the same file on disk
+    #[serde(default = "Config::default_notify_remind_interval")]
+    pub notify_remind_interval: Seconds,
 }
 
 impl Config {
@@ -45,6 +49,10 @@ impl Config {
 
     fn default_min_time_between_write() -> Seconds {
         60.into()
+    }
+
+    fn default_notify_remind_interval() -> Seconds {
+        1800.into()
     }
 }
 

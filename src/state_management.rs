@@ -3,7 +3,10 @@ use std::time::Instant;
 use crate::{event_recorder::TimestampedResponse, ping::PingResponse, units::Seconds};
 
 #[derive(Debug)]
-pub struct MonitorState(State);
+pub struct MonitorState {
+    state: State,
+    notify_remind_interval: Seconds,
+}
 
 #[derive(Debug)]
 enum State {
@@ -35,8 +38,11 @@ impl State {
 }
 
 impl MonitorState {
-    pub fn new() -> Self {
-        Self(State::Start)
+    pub fn new(notify_remind_interval: Seconds) -> Self {
+        Self {
+            state: State::Start,
+            notify_remind_interval,
+        }
     }
 
     /// Updates the state and fires and returns an event if applicable
@@ -46,7 +52,7 @@ impl MonitorState {
     ) -> Option<Event> {
         let ping_response = &timestamped_response.response;
         let result;
-        (result, self.0) = match self.0 {
+        (result, self.state) = match self.state {
             State::Start | State::Up => match ping_response {
                 PingResponse::Time(_ms) => (None, State::Up),
                 PingResponse::Timeout => Self::new_down(),
@@ -109,7 +115,7 @@ impl MonitorState {
     }
 
     fn should_notify(&self, last_notify: Instant) -> bool {
-        todo!()
+        last_notify.elapsed().as_secs() >= self.notify_remind_interval.into()
     }
 
     fn new_down() -> (Option<Event>, State) {

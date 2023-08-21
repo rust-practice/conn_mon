@@ -54,7 +54,7 @@ impl<'a> TargetHandler<'a> {
             file_handle,
             file_path,
             time_sensitive_part_of_filename,
-            state: MonitorState::new(),
+            state: MonitorState::new(config.notify_remind_interval),
             last_write_to_disk_time: None,
             config,
         };
@@ -220,6 +220,7 @@ impl ResponseMessage {
     }
 }
 
+#[derive(Debug)]
 struct EventMessage {
     host_disp_name: String,
     event: Event,
@@ -277,7 +278,7 @@ impl<'a> ResponseManager<'a> {
             .name("EventDispatch".to_string())
             .spawn(move || loop {
                 let msg = rx.recv().expect("Failed to receive event message");
-                todo!()
+                dbg!(msg);
             })
             .context("Failed to start event loop thread")?;
         Ok(())
