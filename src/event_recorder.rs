@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt::Display,
     fs::{create_dir_all, File},
     io::Write,
     path::{Path, PathBuf},
@@ -22,8 +23,8 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimestampedResponse {
-    timestamp: Timestamp,
-    response: PingResponse,
+    pub timestamp: Timestamp,
+    pub response: PingResponse,
 }
 
 #[derive(Debug)]
@@ -181,6 +182,12 @@ impl Timestamp {
 impl Default for Timestamp {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Display for Timestamp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
