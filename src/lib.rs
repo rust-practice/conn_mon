@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod discord;
 mod event_recorder;
 mod ping;
 mod state_management;
@@ -14,6 +15,7 @@ use std::{
 use crate::event_recorder::ResponseManager;
 pub(crate) use crate::{
     config::Config,
+    discord::Discord,
     ping::{ping, Target},
     units::{Milliseconds, Seconds},
 };

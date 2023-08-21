@@ -11,7 +11,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use chrono::Local;
-use log::{debug, trace};
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -19,6 +19,7 @@ use crate::{
     config::Config,
     ping::{PingResponse, Target},
     state_management::{Event, MonitorState},
+    Discord,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -291,19 +292,21 @@ impl<'a> ResponseManager<'a> {
     }
 
     fn start_event_thread(rx: Receiver<EventMessage>) -> anyhow::Result<()> {
+        let discord = Discord::new()?; // TODO: Move into field
         thread::Builder::new()
             .name("EventDispatch".to_string())
             .spawn(move || loop {
                 let msg = rx.recv().expect("Failed to receive event message");
-                dbg!(&msg);
                 let EventMessage {
                     host_disp_name: name,
                     timestamp,
                     event,
                 } = msg;
                 let notification_message = format!("{timestamp} - {name} - {event}",);
-                // TODO send message
-                println!("{notification_message}");
+                if let Err(err) = discord.send(&notification_message) {
+                    // TODO Fallback to email
+                    error!("Failed to send message using discord: {err}")
+                };
             })
             .context("Failed to start event loop thread")?;
         Ok(())
