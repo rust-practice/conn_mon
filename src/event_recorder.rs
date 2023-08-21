@@ -4,7 +4,8 @@ use std::{
     fs::{create_dir_all, File},
     io::Write,
     path::{Path, PathBuf},
-    sync::mpsc::Receiver,
+    sync::mpsc::{self, Receiver, Sender},
+    thread,
     time::Instant,
 };
 
@@ -17,7 +18,7 @@ use serde_json::json;
 use crate::{
     config::Config,
     ping::{PingResponse, Target},
-    state_management::MonitorState,
+    state_management::{Event, MonitorState},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,7 +30,7 @@ pub struct TimestampedResponse {
 #[derive(Debug)]
 /// Manages a target, tracking things like where to write the info to disk and what is pending being written
 pub struct TargetHandler<'a> {
-    file_identifier: String,
+    host_disp_name: String,
     pending_for_file: Vec<TimestampedResponse>,
     file_handle: File,
     file_path: PathBuf,
@@ -42,13 +43,13 @@ pub struct TargetHandler<'a> {
 impl<'a> TargetHandler<'a> {
     fn new(target: &Target, config: &'a Config) -> anyhow::Result<Self> {
         debug!("Creating new TargetHandler for: {target}");
-        let file_identifier = target.host.clone();
+        let host_disp_name = format!("{target}");
         let time_sensitive_part_of_filename = Self::create_time_part_for_filename();
         let (file_path, file_handle) =
-            Self::create_file_handle(&file_identifier, &time_sensitive_part_of_filename)
+            Self::create_file_handle(&host_disp_name, &time_sensitive_part_of_filename)
                 .context("Failed creating file handle during TargetInfo initialization")?;
         let result = Self {
-            file_identifier,
+            host_disp_name,
             pending_for_file: Default::default(),
             file_handle,
             file_path,
@@ -106,9 +107,9 @@ impl<'a> TargetHandler<'a> {
     fn update_file_handle(&mut self) -> anyhow::Result<()> {
         let new_time_part = Self::create_time_part_for_filename();
         if self.time_sensitive_part_of_filename != new_time_part {
-            debug!("Updating file handle for: {}", self.file_identifier);
+            debug!("Updating file handle for: {}", self.host_disp_name);
             let (new_path, new_handle) =
-                Self::create_file_handle(&self.file_identifier, &new_time_part)
+                Self::create_file_handle(&self.host_disp_name, &new_time_part)
                     .context("Creating new file handle for update failed")?;
             self.time_sensitive_part_of_filename = new_time_part;
             self.file_handle = new_handle;
@@ -117,15 +118,24 @@ impl<'a> TargetHandler<'a> {
         Ok(())
     }
 
-    fn receive_response(&mut self, response: TimestampedResponse) -> anyhow::Result<()> {
+    fn receive_response(
+        &mut self,
+        response: TimestampedResponse,
+    ) -> anyhow::Result<Option<EventMessage>> {
         let event = self.state.process_response(&response);
-        if let Some(event) = event {
-            todo!("Send event to another thread that handles sending out notifications")
-        }
+        let result = if let Some(event) = event {
+            Some(EventMessage {
+                host_disp_name: self.host_disp_name.to_string(),
+                event,
+            })
+        } else {
+            None
+        };
         self.pending_for_file.push(response);
         self.update_file_handle()
             .context("Failed to update FileHandle")?;
-        self.write_to_file().context("Failed to write to file")
+        self.write_to_file().context("Failed to write to file")?;
+        Ok(result)
     }
 
     fn write_to_file(&mut self) -> anyhow::Result<()> {
@@ -139,7 +149,7 @@ impl<'a> TargetHandler<'a> {
         }
         trace!(
             "{} has {} pending messages being written to disk at {:?}",
-            self.file_identifier,
+            self.host_disp_name,
             self.pending_for_file.len(),
             self.file_path
         );
@@ -147,7 +157,7 @@ impl<'a> TargetHandler<'a> {
         // Write all messages to disk
         for response in self.pending_for_file.drain(..) {
             writeln!(self.file_handle, "{}", &json!(response).to_string())
-                .with_context(|| format!("Failed to write to file: {}", self.file_identifier))?;
+                .with_context(|| format!("Failed to write to file: {:?}", self.file_path))?;
         }
         debug_assert!(self.pending_for_file.is_empty());
 
@@ -210,9 +220,15 @@ impl ResponseMessage {
     }
 }
 
+struct EventMessage {
+    host_disp_name: String,
+    event: Event,
+}
+
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
 pub struct ResponseManager<'a> {
     rx_ping_response: Receiver<ResponseMessage>,
+    tx_events: Sender<EventMessage>,
     target_map: HashMap<TargetID, TargetHandler<'a>>,
     next_id: TargetID,
     config: &'a Config,
@@ -221,8 +237,11 @@ pub struct ResponseManager<'a> {
 impl<'a> ResponseManager<'a> {
     pub fn new(rx_ping_response: Receiver<ResponseMessage>, config: &'a Config) -> Self {
         debug!("New event manager being created");
+        let (tx_events, rx) = mpsc::channel();
+        Self::start_event_thread(rx);
         Self {
             rx_ping_response,
+            tx_events,
             target_map: Default::default(),
             next_id: Default::default(),
             config,
@@ -251,5 +270,16 @@ impl<'a> ResponseManager<'a> {
                 .receive_response(msg.into_response())
                 .expect("Failed to handle response");
         }
+    }
+
+    fn start_event_thread(rx: Receiver<EventMessage>) -> anyhow::Result<()> {
+        thread::Builder::new()
+            .name("EventDispatch".to_string())
+            .spawn(move || loop {
+                let msg = rx.recv().expect("Failed to receive event message");
+                todo!()
+            })
+            .context("Failed to start event loop thread")?;
+        Ok(())
     }
 }
