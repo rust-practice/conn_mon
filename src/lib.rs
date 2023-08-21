@@ -18,7 +18,7 @@ pub(crate) use crate::{
 };
 use anyhow::Context;
 pub use cli::Cli;
-use log::{error, info, trace};
+use log::trace;
 use state_management::EventPublisher;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
@@ -26,33 +26,15 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
 
     // TODO Create channel and give receiver to manager and a sender to each thread created
 
-    let mut event_manager = EventSubscriber::new();
-
-    let mut thread_handles = vec![];
-
-    // TODO: Start up a thread for each host then await the threads
-    // https://doc.rust-lang.org/book/ch16-02-message-passing.html
+    // Start up a thread for each host then await the threads
     for target in config.targets.iter() {
         let target_id = event_manager
             .register_target(target)
             .with_context(|| format!("Failed to register target: {target}"))?;
-        let thread_handle = start_ping_thread(target_id, target, &config)?;
-        thread_handles.push(thread_handle);
+        start_ping_thread(target_id, target, &config)?;
     }
 
-    // Await threads (I think it will only check if a thread failed one at a time, not suitable for long term use)
-    for (i, x) in thread_handles.into_iter().enumerate() {
-        match x.join() {
-            Ok(_) => info!("Thread for {} shutdown successfully.", config.targets[i]),
-            Err(e) => error!(
-                "Thread for {} Panicked with Message: {e:?}",
-                config.targets[i]
-            ),
-        };
-    }
-
-    println!("Program Shutdown");
-    Ok(())
+    unreachable!("Should block on receive loop")
 }
 
 fn start_ping_thread(
