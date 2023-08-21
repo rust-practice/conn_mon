@@ -121,6 +121,7 @@ pub enum Event {
     Error(String),
 }
 
+#[derive(Debug)]
 pub struct ResponseMessage {
     id: TargetID,
     response: PingResponse,
@@ -159,6 +160,13 @@ impl ResponseManager {
 
     /// Blocks forever receiving messages from ping threads
     pub fn start_receive_loop(&mut self) {
-        todo!()
+        loop {
+            let msg = self.rx.recv().expect("No Senders found");
+            let handler = self
+                .target_map
+                .get_mut(&msg.id)
+                .expect("Failed to get handler for ID");
+            handler.receive_response(msg.response);
+        }
     }
 }

@@ -35,6 +35,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             .with_context(|| format!("Failed to register target: {target}"))?;
         start_ping_thread(target_id, target, tx.clone(), &config)?;
     }
+    drop(tx); // Drop last handle that is not used
 
     event_manager.start_receive_loop();
 
@@ -57,7 +58,7 @@ fn start_ping_thread(
             trace!("Response for {target} was {response:?}");
             tx.send(ResponseMessage::new(target_id, response))
                 .expect("Failed to send response update");
-            thread::sleep(Duration::from_secs(time_between_pings))
+            thread::sleep(Duration::from_secs(time_between_pings));
         })
         .context("Failed to start thread")?;
     Ok(result)
