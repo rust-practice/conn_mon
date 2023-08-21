@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{fmt::Display, time::Instant};
 
 use crate::{event_recorder::TimestampedResponse, ping::PingResponse, units::Seconds};
 
@@ -145,4 +145,28 @@ pub enum Event {
     ConnectionStillError(Seconds),
     ConnectionRestoredAfter(Seconds),
     SystemError(String),
+}
+
+impl Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let result = match self {
+            Event::ConnectionFailed => "Connection Failed".to_string(),
+            Event::ConnectionError(err_msg) => {
+                format!("Error connecting with message {err_msg:?}")
+            }
+            Event::ConnectionStillDown(duration) => {
+                format!("Connection still down. Outage duration {duration}")
+            }
+            Event::ConnectionStillError(duration) => {
+                format!("Connection still in error. Outage duration {duration}")
+            }
+            Event::ConnectionRestoredAfter(duration) => {
+                format!("Connection Restored. Outage duration was {duration}")
+            }
+            Event::SystemError(err_msg) => {
+                format!("System error with message {err_msg:?}")
+            }
+        };
+        write!(f, "{result}")
+    }
 }
