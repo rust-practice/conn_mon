@@ -55,7 +55,7 @@ impl<'a> TargetHandler<'a> {
             file_handle,
             file_path,
             time_sensitive_part_of_filename,
-            state: MonitorState::new(config.notify_remind_interval),
+            state: MonitorState::new(config),
             last_write_to_disk_time: None,
             config,
         };
@@ -339,7 +339,7 @@ impl<'a> ResponseManager<'a> {
                 if !Self::send_via_discord(discord.as_ref(), msg)
                     && !Self::send_via_email(email.as_ref(), msg)
                 {
-                    error!("Failed to send notification via andy means. Message was: {notification_message:?}");
+                    error!("Failed to send notification via all means. Message was: {msg:?}");
                 }
             })
             .context("Failed to start event loop thread")?;
@@ -367,6 +367,12 @@ impl<'a> ResponseManager<'a> {
     /// Attempts to send the message via email, if there is no email set or there is an error it returns false
     /// Not sure if a true is guaranteed message sent but at least we couldn't detect the error
     fn send_via_email(email: Option<&Email>, msg: &str) -> bool {
-        todo!()
+        match email {
+            Some(email) => todo!(),
+            None => {
+                debug!("Email not set. Message not sent via email");
+                false
+            }
+        }
     }
 }
