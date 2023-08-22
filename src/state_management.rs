@@ -168,7 +168,7 @@ impl MonitorState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Event {
     Startup,
     IAmAlive(Seconds),

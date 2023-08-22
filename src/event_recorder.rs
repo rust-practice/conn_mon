@@ -334,6 +334,7 @@ impl<'a> ResponseManager<'a> {
             .name("EventDispatch".to_string())
             .spawn(move || loop {
                 let event_message = rx.recv().expect("Failed to receive event message");
+
                 let EventMessage {
                     host_disp_name: name,
                     timestamp,
@@ -341,7 +342,16 @@ impl<'a> ResponseManager<'a> {
                 } = event_message;
                 let notification_message = format!("{timestamp} - {name} - {event}",);
                 let msg = &notification_message;
-                if !Self::send_via_discord(discord.as_ref(), msg)
+
+                if Event::Startup == event {
+                    // Test all comms methods
+                    if discord.is_some() && !Self::send_via_discord(discord.as_ref(), msg) {
+                        error!("Test of discord failed");
+                    }
+                    if email.is_some() && !Self::send_via_email(email.as_ref(), msg) {
+                        error!("Test of email failed");
+                    }
+                } else if !Self::send_via_discord(discord.as_ref(), msg)
                     && !Self::send_via_email(email.as_ref(), msg)
                 {
                     error!("Failed to send notification via all means. Message was: {msg:?}");
