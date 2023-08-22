@@ -126,9 +126,7 @@ impl MonitorState {
                 PingResponse::Timeout | PingResponse::ErrorPing { .. } => (None, State::down_now()),
                 PingResponse::ErrorOS { .. } | PingResponse::ErrorInternal { .. } => {
                     let notification = if self.should_notify() {
-                        Some(Event::ConnectionStillError(
-                            start.elapsed().as_secs().into(),
-                        ))
+                        Some(Event::StillSystemError(start.elapsed().as_secs().into()))
                     } else {
                         None
                     };
@@ -175,9 +173,9 @@ pub enum Event {
     ConnectionFailed(Seconds),
     ConnectionError(Seconds, String),
     ConnectionStillDown(Seconds),
-    ConnectionStillError(Seconds),
     ConnectionRestoredAfter(Seconds),
     SystemError(String),
+    StillSystemError(Seconds),
 }
 
 impl Display for Event {
@@ -192,8 +190,8 @@ impl Display for Event {
             Event::ConnectionStillDown(duration) => {
                 format!("Connection still down. Outage duration {duration}")
             }
-            Event::ConnectionStillError(duration) => {
-                format!("Connection still in error. Outage duration {duration}")
+            Event::StillSystemError(duration) => {
+                format!("System Error persists. Error duration {duration}")
             }
             Event::ConnectionRestoredAfter(duration) => {
                 format!("Connection Restored. Outage duration was {duration}")
