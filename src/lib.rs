@@ -1,6 +1,7 @@
 mod cli;
 mod config;
 mod event_recorder;
+mod notification;
 mod ping;
 mod state_management;
 mod units;
@@ -14,6 +15,7 @@ use std::{
 use crate::event_recorder::ResponseManager;
 pub(crate) use crate::{
     config::Config,
+    notification::{discord::Discord, email::Email},
     ping::{ping, Target},
     units::{Milliseconds, Seconds},
 };
@@ -21,8 +23,7 @@ use anyhow::Context;
 use event_recorder::{ResponseMessage, TargetID};
 use log::debug;
 
-pub use cli::Cli;
-pub use event_recorder::TimestampedResponse;
+pub use crate::{cli::Cli, event_recorder::TimestampedResponse};
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
@@ -40,6 +41,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     }
     drop(tx); // Drop last handle that is not used
 
+    response_manager.start_keep_alive()?;
     response_manager.start_receive_loop();
 
     unreachable!("Should block on receive loop")

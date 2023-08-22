@@ -6,12 +6,12 @@ use std::{
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use anyhow::{bail, Context};
 use chrono::Local;
-use log::{debug, trace};
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -19,6 +19,7 @@ use crate::{
     config::Config,
     ping::{PingResponse, Target},
     state_management::{Event, MonitorState},
+    Discord, Email,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,7 +55,7 @@ impl<'a> TargetHandler<'a> {
             file_handle,
             file_path,
             time_sensitive_part_of_filename,
-            state: MonitorState::new(config.notify_remind_interval),
+            state: MonitorState::new(config),
             last_write_to_disk_time: None,
             config,
         };
@@ -144,7 +145,7 @@ impl<'a> TargetHandler<'a> {
                 return Ok(()); // Do nothing enough time has not passed yet or nothing to write
             }
         }
-        trace!(
+        debug!(
             "{} has {} pending messages being written to disk at {:?}",
             self.host_disp_name,
             self.pending_for_file.len(),
@@ -232,6 +233,10 @@ impl EventMessage {
             event,
         }
     }
+
+    fn system_message(event: Event) -> Self {
+        Self::new("SYSTEM_MSG".to_string(), event)
+    }
 }
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
@@ -271,40 +276,143 @@ impl<'a> ResponseManager<'a> {
 
     /// Blocks forever receiving messages from ping threads
     pub fn start_receive_loop(&mut self) {
-        trace!("Main Receive loop started for ping responses");
+        debug!("Main Receive loop started for ping responses");
         loop {
             let msg = self.rx_ping_response.recv().expect("No Senders found");
+
             let handler = self
                 .target_map
                 .get_mut(&msg.id)
                 .expect("Failed to get handler for ID");
-            if let Some(event_msg) = handler
+
+            match handler
                 .receive_response(msg.into_response())
-                .expect("Failed to handle response")
+                .context("Failed to handle response")
             {
-                self.tx_events
-                    .send(event_msg)
-                    .expect("Failed to send event");
+                Ok(Some(event_msg)) => {
+                    if let Err(err) = self
+                        .tx_events
+                        .send(event_msg)
+                        .context("Failed to send event. Event dispatch thread likely panicked")
+                    {
+                        error!("{err:?}");
+                    };
+                }
+                Ok(None) => (), // No event nothing needed to be done
+                Err(e) => {
+                    error!("{e:?}");
+                    if let Err(err) =
+                        self.tx_events
+                            .send(EventMessage::system_message(Event::SystemError(format!(
+                                "{e:?}"
+                            ))))
+                    {
+                        error!("{err:?}");
+                    }
+                }
             }
         }
     }
 
     fn start_event_thread(rx: Receiver<EventMessage>) -> anyhow::Result<()> {
+        let discord: Option<Discord> = match Discord::new() {
+            Ok(d) => Some(d),
+            Err(e) => {
+                error!("Unable to setup discord. Discord notifications will be disabled. {e:?}");
+                None
+            }
+        };
+        let email: Option<Email> = match Email::new() {
+            Ok(client) => Some(client),
+            Err(e) => {
+                error!("Unable to setup email. Email notifications will be disabled. {e:?}");
+                None
+            }
+        };
         thread::Builder::new()
             .name("EventDispatch".to_string())
             .spawn(move || loop {
-                let msg = rx.recv().expect("Failed to receive event message");
-                dbg!(&msg);
+                let event_message = rx.recv().expect("Failed to receive event message");
+
                 let EventMessage {
                     host_disp_name: name,
                     timestamp,
                     event,
-                } = msg;
+                } = event_message;
                 let notification_message = format!("{timestamp} - {name} - {event}",);
-                // TODO send message
-                println!("{notification_message}");
+                let msg = &notification_message;
+
+                if Event::Startup == event {
+                    // Test all comms methods
+                    if discord.is_some() && !Self::send_via_discord(discord.as_ref(), msg) {
+                        error!("Test of discord failed");
+                    }
+                    if email.is_some() && !Self::send_via_email(email.as_ref(), msg) {
+                        error!("Test of email failed");
+                    }
+                } else if !Self::send_via_discord(discord.as_ref(), msg)
+                    && !Self::send_via_email(email.as_ref(), msg)
+                {
+                    error!("Failed to send notification via all means. Message was: {msg:?}");
+                }
             })
             .context("Failed to start event loop thread")?;
+        Ok(())
+    }
+
+    /// Attempts to send the message via discord, if there is no discord set or there is an error it returns false
+    /// Not sure if a true is guaranteed message sent but at least we couldn't detect the error
+    fn send_via_discord(discord: Option<&Discord>, msg: &str) -> bool {
+        match discord {
+            Some(discord) => match discord.send(msg) {
+                Ok(()) => true,
+                Err(e) => {
+                    error!("Failed to send message via discord: {e:?}");
+                    false
+                }
+            },
+            None => {
+                debug!("Discord not set. Message not sent via discord");
+                false
+            }
+        }
+    }
+
+    /// Attempts to send the message via email, if there is no email set or there is an error it returns false
+    /// Not sure if a true is guaranteed message sent but at least we couldn't detect the error
+    fn send_via_email(email: Option<&Email>, msg: &str) -> bool {
+        match email {
+            Some(email) => match email.send(msg) {
+                Ok(()) => true,
+                Err(e) => {
+                    error!("Failed to send message via email: {e:?}");
+                    false
+                }
+            },
+            None => {
+                debug!("Email not set. Message not sent via email");
+                false
+            }
+        }
+    }
+
+    pub(crate) fn start_keep_alive(&self) -> anyhow::Result<()> {
+        let tx = self.tx_events.clone();
+        let keep_alive_freq = Duration::from_secs(24 * 60 * 60);
+        let start = Instant::now();
+
+        tx.send(EventMessage::system_message(Event::Startup))
+            .expect("Failed to send startup event");
+        thread::Builder::new()
+            .name("KeepAlive".to_string())
+            .spawn(move || loop {
+                thread::sleep(keep_alive_freq);
+                tx.send(EventMessage::system_message(Event::IAmAlive(
+                    start.elapsed().as_secs().into(),
+                )))
+                .expect("Failed to send keep alive event");
+            })
+            .context("Failed to start keep alive thread")?;
         Ok(())
     }
 }
