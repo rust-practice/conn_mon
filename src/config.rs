@@ -60,7 +60,6 @@ impl Config {
     }
 
     fn default_min_time_before_first_down_notification() -> Seconds {
-        // TODO: Add to config
         60.into()
     }
 }

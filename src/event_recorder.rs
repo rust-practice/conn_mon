@@ -277,7 +277,6 @@ impl<'a> ResponseManager<'a> {
     /// Blocks forever receiving messages from ping threads
     pub fn start_receive_loop(&mut self) {
         debug!("Main Receive loop started for ping responses");
-        // TODO Send a notification to say the monitor is online
         loop {
             let msg = self.rx_ping_response.recv().expect("No Senders found");
 
