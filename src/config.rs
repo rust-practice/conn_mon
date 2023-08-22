@@ -29,8 +29,8 @@ pub struct Config {
     pub notify_remind_interval: Seconds,
 
     /// Minimum time between writing to the same file on disk
-    #[serde(default = "Config::default_min_time_before_down_notification")]
-    pub min_time_before_down_notification: Seconds,
+    #[serde(default = "Config::default_min_time_before_first_down_notification")]
+    pub min_time_before_first_down_notification: Seconds,
 }
 
 impl Config {
@@ -59,7 +59,7 @@ impl Config {
         3600.into()
     }
 
-    fn default_min_time_before_down_notification() -> Seconds {
+    fn default_min_time_before_first_down_notification() -> Seconds {
         // TODO: Add to config
         60.into()
     }

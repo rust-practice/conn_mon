@@ -30,5 +30,5 @@
     "ping_repeat_freq": 5,
     "min_time_between_write": 60,
     "notify_remind_interval": 1800,
-    "min_time_before_down_notification": 300
+    "min_time_before_first_down_notification": 300
 }
