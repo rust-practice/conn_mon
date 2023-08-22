@@ -319,14 +319,14 @@ impl<'a> ResponseManager<'a> {
         let discord: Option<Discord> = match Discord::new() {
             Ok(d) => Some(d),
             Err(e) => {
-                error!("Unable to setup discord. Discord notifications will be disabled. {e}");
+                error!("Unable to setup discord. Discord notifications will be disabled. {e:?}");
                 None
             }
         };
         let email: Option<Email> = match Email::new() {
             Ok(client) => Some(client),
             Err(e) => {
-                error!("Unable to setup email. Email notifications will be disabled. {e}");
+                error!("Unable to setup email. Email notifications will be disabled. {e:?}");
                 None
             }
         };
@@ -368,7 +368,7 @@ impl<'a> ResponseManager<'a> {
             Some(discord) => match discord.send(msg) {
                 Ok(()) => true,
                 Err(e) => {
-                    error!("Failed to send message via discord: {e}");
+                    error!("Failed to send message via discord: {e:?}");
                     false
                 }
             },
@@ -383,7 +383,13 @@ impl<'a> ResponseManager<'a> {
     /// Not sure if a true is guaranteed message sent but at least we couldn't detect the error
     fn send_via_email(email: Option<&Email>, msg: &str) -> bool {
         match email {
-            Some(email) => todo!(),
+            Some(email) => match email.send(msg) {
+                Ok(()) => true,
+                Err(e) => {
+                    error!("Failed to send message via email: {e:?}");
+                    false
+                }
+            },
             None => {
                 debug!("Email not set. Message not sent via email");
                 false
