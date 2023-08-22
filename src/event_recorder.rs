@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use anyhow::{bail, Context};
@@ -233,6 +233,10 @@ impl EventMessage {
             event,
         }
     }
+
+    fn system_message(event: Event) -> Self {
+        Self::new("SYSTEM_MSG".to_string(), event)
+    }
 }
 
 /// Handles all incoming events and sends them to the right handler based on the ID in the message
@@ -298,11 +302,12 @@ impl<'a> ResponseManager<'a> {
                 Ok(None) => (), // No event nothing needed to be done
                 Err(e) => {
                     error!("{e:?}");
-                    if let Err(err) = self.tx_events.send(EventMessage {
-                        host_disp_name: "main".to_string(),
-                        timestamp: Timestamp::new(),
-                        event: Event::SystemError(format!("{e:?}")),
-                    }) {
+                    if let Err(err) =
+                        self.tx_events
+                            .send(EventMessage::system_message(Event::SystemError(format!(
+                                "{e:?}"
+                            ))))
+                    {
                         error!("{err:?}");
                     }
                 }
@@ -374,5 +379,25 @@ impl<'a> ResponseManager<'a> {
                 false
             }
         }
+    }
+
+    pub(crate) fn start_keep_alive(&self) -> anyhow::Result<()> {
+        let tx = self.tx_events.clone();
+        let keep_alive_freq = Duration::from_secs(24 * 60 * 60);
+        let start = Instant::now();
+
+        tx.send(EventMessage::system_message(Event::Startup))
+            .expect("Failed to send startup event");
+        thread::Builder::new()
+            .name("KeepAlive".to_string())
+            .spawn(move || loop {
+                thread::sleep(keep_alive_freq);
+                tx.send(EventMessage::system_message(Event::IAmAlive(
+                    start.elapsed().as_secs().into(),
+                )))
+                .expect("Failed to send keep alive event");
+            })
+            .context("Failed to start keep alive thread")?;
+        Ok(())
     }
 }

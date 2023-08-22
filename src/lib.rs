@@ -41,6 +41,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     }
     drop(tx); // Drop last handle that is not used
 
+    response_manager.start_keep_alive()?;
     response_manager.start_receive_loop();
 
     unreachable!("Should block on receive loop")
