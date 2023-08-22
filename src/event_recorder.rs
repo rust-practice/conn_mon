@@ -284,9 +284,13 @@ impl<'a> ResponseManager<'a> {
                 .receive_response(msg.into_response())
                 .expect("Failed to handle response")
             {
-                self.tx_events
+                if let Err(err) = self
+                    .tx_events
                     .send(event_msg)
-                    .expect("Failed to send event");
+                    .context("Failed to send event. Event dispatch thread likely panicked")
+                {
+                    error!("{err:?}");
+                };
             }
         }
     }
