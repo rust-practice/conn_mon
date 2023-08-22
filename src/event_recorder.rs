@@ -276,21 +276,36 @@ impl<'a> ResponseManager<'a> {
         // TODO Send a notification to say the monitor is online
         loop {
             let msg = self.rx_ping_response.recv().expect("No Senders found");
+
             let handler = self
                 .target_map
                 .get_mut(&msg.id)
                 .expect("Failed to get handler for ID");
-            if let Some(event_msg) = handler
+
+            match handler
                 .receive_response(msg.into_response())
-                .expect("Failed to handle response")
+                .context("Failed to handle response")
             {
-                if let Err(err) = self
-                    .tx_events
-                    .send(event_msg)
-                    .context("Failed to send event. Event dispatch thread likely panicked")
-                {
-                    error!("{err:?}");
-                };
+                Ok(Some(event_msg)) => {
+                    if let Err(err) = self
+                        .tx_events
+                        .send(event_msg)
+                        .context("Failed to send event. Event dispatch thread likely panicked")
+                    {
+                        error!("{err:?}");
+                    };
+                }
+                Ok(None) => (), // No event nothing needed to be done
+                Err(e) => {
+                    error!("{e:?}");
+                    if let Err(err) = self.tx_events.send(EventMessage {
+                        host_disp_name: "main".to_string(),
+                        timestamp: Timestamp::new(),
+                        event: Event::SystemError(format!("{e:?}")),
+                    }) {
+                        error!("{err:?}");
+                    }
+                }
             }
         }
     }
