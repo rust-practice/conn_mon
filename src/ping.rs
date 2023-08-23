@@ -1,5 +1,5 @@
 use anyhow::bail;
-use log::{debug, warn};
+use log::{debug, error};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, process::Command, sync::OnceLock};
@@ -38,23 +38,38 @@ pub fn ping(target: &Target, default_timeout: &Seconds) -> PingResponse {
             }
         }
     };
-
-    // Check if stderr is not empty
-    if !output.stderr.is_empty() {
-        let stderr = match std::str::from_utf8(&output.stderr) {
-            Ok(out) => out,
-            Err(e) => {
-                return PingResponse::ErrorOS {
-                    msg: format!("Failed to convert stdout to ut8: {e}"),
-                }
+    let stderr = match std::str::from_utf8(&output.stderr) {
+        Ok(out) => out,
+        Err(e) => {
+            return PingResponse::ErrorOS {
+                msg: format!("Failed to convert stdout to ut8: {e}"),
             }
-        };
-        warn!("Pinging {target:?} stderr not empty: {stderr:?}");
+        }
+    };
+
+    match (stdout.is_empty(), stderr.is_empty()) {
+        (true, true) => {
+            // Never seen this case but must be exhaustive (Didn't expect anything on stderr before so...)
+            return PingResponse::ErrorOS {
+                msg: "Both stdout and stderr are empty".to_string(),
+            };
+        }
+        (true, false) => {
+            // When the ping program fails to do a ping it uses stderr but stdout is then empty
+            return PingResponse::ErrorPing {
+                msg: stderr.to_string(),
+            };
+        }
+        (false, true) => (), // This is the normal case do nothing
+        (false, false) => {
+            // Not expecting both to have a value, don't want to fail if we got a valid response so just log
+            error!("Pinging {target:?} both stdout and stderr not empty. stderr: {stderr:?}")
+        }
     }
 
     match stdout.try_into() {
         Ok(result) => result,
-        Err(e) => PingResponse::ErrorInternal {
+        Err(e) => PingResponse::ErrorProgramming {
             msg: format!("{e}"),
         },
     }
@@ -100,7 +115,7 @@ pub enum PingResponse {
     Timeout,
     ErrorPing { msg: String },
     ErrorOS { msg: String },
-    ErrorInternal { msg: String },
+    ErrorProgramming { msg: String },
 }
 
 impl TryFrom<&str> for PingResponse {

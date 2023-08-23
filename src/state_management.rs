@@ -60,7 +60,7 @@ impl MonitorState {
             State::Start | State::Up => match ping_response {
                 PingResponse::Time(_ms) => (None, State::Up),
                 PingResponse::Timeout | PingResponse::ErrorPing { .. } => (None, State::down_now()),
-                PingResponse::ErrorOS { msg } | PingResponse::ErrorInternal { msg } => {
+                PingResponse::ErrorOS { msg } | PingResponse::ErrorProgramming { msg } => {
                     Self::new_system_error(msg)
                 }
             },
@@ -112,7 +112,7 @@ impl MonitorState {
                     };
                     (notification, State::Down { start, last_notify })
                 }
-                PingResponse::ErrorOS { msg } | PingResponse::ErrorInternal { msg } => {
+                PingResponse::ErrorOS { msg } | PingResponse::ErrorProgramming { msg } => {
                     (Some(Event::SystemError(msg.clone())), State::error_now())
                 }
             },
@@ -124,7 +124,7 @@ impl MonitorState {
                     State::Up,
                 ),
                 PingResponse::Timeout | PingResponse::ErrorPing { .. } => (None, State::down_now()),
-                PingResponse::ErrorOS { .. } | PingResponse::ErrorInternal { .. } => {
+                PingResponse::ErrorOS { .. } | PingResponse::ErrorProgramming { .. } => {
                     let notification = if self.should_notify() {
                         Some(Event::StillSystemError(start.elapsed().as_secs().into()))
                     } else {

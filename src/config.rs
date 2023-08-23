@@ -73,8 +73,8 @@ mod tests {
 
     /// Ensure sample files are valid json
     #[rstest]
-    #[case("sample_config_full.json")]
-    #[case("sample_config_minimal.json")]
+    #[case("sample_config_full/config.json")]
+    #[case("sample_config_minimal/config.json")]
     fn load_sample_config(#[case] filename: &str) {
         // Arrange
         let path = Path::new(filename);

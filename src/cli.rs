@@ -1,7 +1,8 @@
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
+use anyhow::Context;
 use clap::{Parser, ValueEnum};
-use log::LevelFilter;
+use log::{debug, info, LevelFilter};
 
 #[derive(Parser, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Default)]
 #[command(
@@ -11,11 +12,11 @@ use log::LevelFilter;
     long_about = "A program to monitor the quality of a connection."
 )]
 pub struct Cli {
-    /// Specify config file to use
+    /// Specify directory to use for loading configs and outputting log records
     ///
-    /// If not specified uses `.config/<app_name>` in users home folder
-    #[arg(long = "config", short, value_name = "PATH")]
-    pub config_filename: Option<String>,
+    /// If not specified uses current working directory
+    #[arg(long = "dir", short = 'd', value_name = "PATH")]
+    pub working_dir: Option<String>,
 
     /// Set logging level to use
     #[arg(long, short, value_enum, default_value_t = LogLevel::Warn)]
@@ -24,10 +25,26 @@ pub struct Cli {
 
 impl Cli {
     pub fn get_config_path(&self) -> PathBuf {
-        match self.config_filename.as_ref() {
-            Some(val) => PathBuf::from(val),
-            None => PathBuf::from("config.json"),
+        PathBuf::from("config.json")
+    }
+    /// Changes the current working directory to path if one is given
+    pub fn update_current_working_dir(&self) -> anyhow::Result<()> {
+        debug!(
+            "Before attempting update current dir, it is: {}",
+            env::current_dir()?.display()
+        );
+        if let Some(path) = &self.working_dir {
+            info!("Going to update working directory to to '{path}'");
+            std::env::set_current_dir(path)
+                .with_context(|| format!("Failed to set current dir to: '{path}'"))?;
+            info!(
+                "After updating current dir, it is: '{}'",
+                env::current_dir()?.display()
+            );
+        } else {
+            debug!("No user supplied path found. No change")
         }
+        Ok(())
     }
 }
 

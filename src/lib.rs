@@ -26,6 +26,8 @@ use log::debug;
 pub use crate::{cli::Cli, event_recorder::TimestampedResponse};
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
+    cli.update_current_working_dir()
+        .context("Failed to update current working directory")?;
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
     let (tx, rx) = mpsc::channel();
@@ -41,6 +43,9 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     }
     drop(tx); // Drop last handle that is not used
 
+    response_manager
+        .log_events_output_folder()
+        .context("Failed to log output folder")?;
     response_manager.start_keep_alive()?;
     response_manager.start_receive_loop();
 

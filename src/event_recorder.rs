@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fmt::Display,
-    fs::{create_dir_all, File},
+    fs::{canonicalize, create_dir_all, File},
     io::Write,
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender},
@@ -11,7 +11,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use chrono::Local;
-use log::{debug, error};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -42,6 +42,7 @@ pub struct TargetHandler<'a> {
 }
 
 impl<'a> TargetHandler<'a> {
+    const BASE_FOLDER: &str = "events";
     fn new(target: &Target, config: &'a Config) -> anyhow::Result<Self> {
         debug!("Creating new TargetHandler for: {target}");
         let host_disp_name = format!("{target}");
@@ -67,14 +68,13 @@ impl<'a> TargetHandler<'a> {
         host_identifier: &str,
         time_sensitive_part_of_filename: &str,
     ) -> anyhow::Result<(PathBuf, File)> {
-        let base_folder = "events";
         let new_filename = format!(
             "{} {} events.log",
             time_sensitive_part_of_filename, host_identifier
         );
         debug!("Creating new file handle for {new_filename:?}");
 
-        let path = Path::new(base_folder);
+        let path = Path::new(Self::BASE_FOLDER);
         create_dir_all(path).context("Failed to create base directory for events")?;
 
         let path = path.join(new_filename);
@@ -413,6 +413,16 @@ impl<'a> ResponseManager<'a> {
                 .expect("Failed to send keep alive event");
             })
             .context("Failed to start keep alive thread")?;
+        Ok(())
+    }
+
+    pub(crate) fn log_events_output_folder(&self) -> anyhow::Result<()> {
+        let event_output_folder = TargetHandler::BASE_FOLDER;
+        let event_output_folder = canonicalize(event_output_folder)
+            .context("Canonicalization of event output folder failed")?;
+        let msg = format!("Event logs are being stored at: {event_output_folder:?}");
+        info!("{msg}");
+        println!("{msg}");
         Ok(())
     }
 }
