@@ -41,6 +41,9 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     }
     drop(tx); // Drop last handle that is not used
 
+    response_manager
+        .log_events_output_folder()
+        .context("Failed to log output folder")?;
     response_manager.start_keep_alive()?;
     response_manager.start_receive_loop();
 
