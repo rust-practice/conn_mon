@@ -26,6 +26,8 @@ use log::debug;
 pub use crate::{cli::Cli, event_recorder::TimestampedResponse};
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
+    cli.update_current_working_dir()
+        .context("Failed to update current working directory")?;
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
     let (tx, rx) = mpsc::channel();
