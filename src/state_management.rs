@@ -189,7 +189,7 @@ impl Display for Event {
                 format!("Connection Failed. Outage duration {duration}")
             }
             Event::ConnectionError(duration, err_msg) => {
-                format!("Error connecting with message {err_msg:?}. Outage duration{duration}")
+                format!("Error connecting with message {err_msg:?}. Outage duration {duration}")
             }
             Event::ConnectionStillDown(duration) => {
                 format!("Connection still down. Outage duration {duration}")
