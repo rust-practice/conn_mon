@@ -49,7 +49,7 @@ impl MonitorState {
         }
     }
 
-    /// Updates the state and fires and returns an event if applicable
+    /// Updates the state and returns an event if one occurred as a result of the transition applicable
     pub fn process_response(
         &mut self,
         timestamped_response: &TimestampedResponse,
