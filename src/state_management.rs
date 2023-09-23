@@ -198,19 +198,19 @@ impl Display for Event {
             Event::Startup => "Monitoring Tool Started Up".to_string(),
             Event::IAmAlive(uptime) => format!("I'm still alive. Uptime: {uptime}"),
             Event::ConnectionFailed(duration) => {
-                format!("Connection Failed. Outage duration {duration}")
+                format!("NEW Down. Outage duration IS {duration}")
             }
             Event::ConnectionError(duration, err_msg) => {
-                format!("Error connecting with message {err_msg:?}. Outage duration {duration}")
+                format!("Error connecting with message {err_msg:?}. Outage duration IS {duration}")
             }
             Event::ConnectionStillDown(duration) => {
-                format!("Connection still down. Outage duration {duration}")
+                format!("STILL down. Outage duration IS {duration}")
             }
             Event::StillSystemError(duration) => {
-                format!("System Error persists. Error duration {duration}")
+                format!("System Error persists. Error duration IS {duration}")
             }
             Event::ConnectionRestoredAfter(duration) => {
-                format!("Connection Restored. Outage duration was {duration}")
+                format!("Connection back UP. Outage duration WAS {duration}")
             }
             Event::SystemError(err_msg) => {
                 format!("System error with message {err_msg:?}")
