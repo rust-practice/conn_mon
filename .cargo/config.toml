@@ -1,3 +1,4 @@
 [alias]
 # Runs the minimal sample config file
 sample = "run -- -d sample_config_minimal"
+dbg = "run -- -l info"                     # Lots of messages from serenity
