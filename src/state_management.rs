@@ -59,14 +59,19 @@ impl MonitorState {
         (result, self.state) = match self.state {
             State::Start | State::Up => match ping_response {
                 PingResponse::Time(_ms) => (None, State::Up),
-                PingResponse::Timeout | PingResponse::ErrorPing { .. } => (
-                    if self.notify_remind_interval == 0.into() {
-                        Some(Event::ConnectionFailed(0.into()))
+                PingResponse::Timeout | PingResponse::ErrorPing { .. } => {
+                    if self.min_time_before_first_down_notification == 0.into() {
+                        (
+                            Some(Event::ConnectionFailed(0.into())),
+                            State::Down {
+                                start: Instant::now(),
+                                last_notify: Some(Instant::now()),
+                            },
+                        )
                     } else {
-                        None
-                    },
-                    State::down_now(),
-                ),
+                        (None, State::down_now())
+                    }
+                }
                 PingResponse::ErrorOS { msg } | PingResponse::ErrorProgramming { msg } => {
                     Self::new_system_error(msg)
                 }
