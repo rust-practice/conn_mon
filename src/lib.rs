@@ -50,6 +50,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     response_manager.start_receive_loop();
 
     unreachable!("Should block on receive loop")
+    // TODO Add graceful shutdown https://rust-cli.github.io/book/in-depth/signals.html
 }
 
 fn start_ping_thread(

@@ -49,7 +49,7 @@ impl MonitorState {
         }
     }
 
-    /// Updates the state and fires and returns an event if applicable
+    /// Updates the state and returns an event if one occurred as a result of the transition applicable
     pub fn process_response(
         &mut self,
         timestamped_response: &TimestampedResponse,
@@ -59,7 +59,19 @@ impl MonitorState {
         (result, self.state) = match self.state {
             State::Start | State::Up => match ping_response {
                 PingResponse::Time(_ms) => (None, State::Up),
-                PingResponse::Timeout | PingResponse::ErrorPing { .. } => (None, State::down_now()),
+                PingResponse::Timeout | PingResponse::ErrorPing { .. } => {
+                    if self.min_time_before_first_down_notification == 0.into() {
+                        (
+                            Some(Event::ConnectionFailed(0.into())),
+                            State::Down {
+                                start: Instant::now(),
+                                last_notify: Some(Instant::now()),
+                            },
+                        )
+                    } else {
+                        (None, State::down_now())
+                    }
+                }
                 PingResponse::ErrorOS { msg } | PingResponse::ErrorProgramming { msg } => {
                     Self::new_system_error(msg)
                 }
@@ -186,19 +198,19 @@ impl Display for Event {
             Event::Startup => "Monitoring Tool Started Up".to_string(),
             Event::IAmAlive(uptime) => format!("I'm still alive. Uptime: {uptime}"),
             Event::ConnectionFailed(duration) => {
-                format!("Connection Failed. Outage duration {duration}")
+                format!("NEW Down. Outage duration IS {duration}")
             }
             Event::ConnectionError(duration, err_msg) => {
-                format!("Error connecting with message {err_msg:?}. Outage duration{duration}")
+                format!("Error connecting with message {err_msg:?}. Outage duration IS {duration}")
             }
             Event::ConnectionStillDown(duration) => {
-                format!("Connection still down. Outage duration {duration}")
+                format!("STILL down. Outage duration IS {duration}")
             }
             Event::StillSystemError(duration) => {
-                format!("System Error persists. Error duration {duration}")
+                format!("System Error persists. Error duration IS {duration}")
             }
             Event::ConnectionRestoredAfter(duration) => {
-                format!("Connection Restored. Outage duration was {duration}")
+                format!("Connection back UP. Outage duration WAS {duration}")
             }
             Event::SystemError(err_msg) => {
                 format!("System error with message {err_msg:?}")
