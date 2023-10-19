@@ -85,6 +85,10 @@ pub struct Target {
 
     /// If supplied overrides the global default timeout for waiting for a response
     pub timeout: Option<Seconds>,
+
+    /// If true this host will not attempt to be pinged
+    #[serde(default)]
+    pub disabled: bool,
 }
 
 impl From<&str> for Target {
@@ -99,6 +103,7 @@ impl From<String> for Target {
             host,
             display_name: None,
             timeout: None,
+            disabled: false,
         }
     }
 }

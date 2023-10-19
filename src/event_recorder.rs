@@ -318,7 +318,9 @@ impl<'a> ResponseManager<'a> {
         let discord: Option<Discord> = match Discord::new() {
             Ok(d) => Some(d),
             Err(e) => {
-                error!("Unable to setup discord. Discord notifications will be disabled. {e:?}");
+                error!(
+                    "Unable to setup discord. Discord notifications will be disabled.Error:\n{e:?}"
+                );
                 None
             }
         };
