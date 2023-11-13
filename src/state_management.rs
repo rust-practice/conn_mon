@@ -164,6 +164,7 @@ impl MonitorState {
     /// Meant for Down and SystemError only but couldn't find easy way to make function only compile if in one of those states
     /// Others just always return true as this function is not meant for them
     fn should_notify(&self) -> bool {
+        // TODO: Support two reminder intervals
         let last_notify = match self.state {
             State::Start | State::Up => return true,
             State::Down { start, last_notify } => match last_notify {

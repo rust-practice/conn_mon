@@ -11,6 +11,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn init_logging(level: LevelFilter) -> anyhow::Result<()> {
+    // TODO: Change to log to file
     Builder::new().filter(None, level).try_init()?;
     Ok(())
 }
