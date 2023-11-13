@@ -52,7 +52,7 @@ impl Config {
     }
 
     fn default_min_time_between_write() -> Seconds {
-        60.into()
+        300.into()
     }
 
     fn default_notify_remind_interval() -> Seconds {
