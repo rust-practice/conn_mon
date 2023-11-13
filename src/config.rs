@@ -31,6 +31,14 @@ pub struct Config {
     /// Minimum time before sending the first notification that a host went down
     #[serde(default = "Config::default_min_time_before_first_down_notification")]
     pub min_time_before_first_down_notification: Seconds,
+
+    /// Period of time after which reminder interval changes
+    #[serde(default = "Config::default_long_reminder_interval_after")]
+    pub long_reminder_interval_after: Seconds,
+
+    /// Interval to use when something has been sending reminders for a long time
+    #[serde(default = "Config::default_long_reminder_interval")]
+    pub long_reminder_interval: Seconds,
 }
 
 impl Config {
@@ -61,6 +69,14 @@ impl Config {
 
     fn default_min_time_before_first_down_notification() -> Seconds {
         30.into()
+    }
+
+    fn default_long_reminder_interval_after() -> Seconds {
+        18000.into() // 5 Hours
+    }
+
+    fn default_long_reminder_interval() -> Seconds {
+        86400.into() // One day
     }
 }
 
