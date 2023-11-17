@@ -42,7 +42,7 @@ pub struct TargetHandler<'a> {
 }
 
 impl<'a> TargetHandler<'a> {
-    const BASE_FOLDER: &str = "events";
+    const BASE_FOLDER: &'static str = "events";
     fn new(target: &Target, config: &'a Config) -> anyhow::Result<Self> {
         debug!("Creating new TargetHandler for: {target}");
         let host_disp_name = format!("{target}");

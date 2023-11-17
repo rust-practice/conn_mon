@@ -2,7 +2,7 @@ use std::fs;
 
 use anyhow::Context;
 use log::warn;
-use serenity::{http::Http, model::webhook::Webhook};
+use serenity::{builder::ExecuteWebhook, http::Http, model::webhook::Webhook};
 use tokio::runtime::Runtime;
 
 pub struct Discord {
@@ -33,8 +33,9 @@ impl Discord {
         let webhook = Webhook::from_url(&self.http, &self.url)
             .await
             .context("Failed to build webhook")?;
+        let builder = ExecuteWebhook::new().content(msg);
         webhook
-            .execute(&self.http, true, |w| w.content(msg))
+            .execute(&self.http, true, builder)
             .await
             .context("Failed to send msg via discord using webhook")?;
         Ok(())

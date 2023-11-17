@@ -24,11 +24,11 @@ pub struct Config {
     #[serde(default = "Config::default_min_time_between_write")]
     pub min_time_between_write: Seconds,
 
-    /// Minimum time between writing to the same file on disk
+    /// Frequency at which reminders are sent
     #[serde(default = "Config::default_notify_remind_interval")]
     pub notify_remind_interval: Seconds,
 
-    /// Minimum time between writing to the same file on disk
+    /// Minimum time before sending the first notification that a host went down
     #[serde(default = "Config::default_min_time_before_first_down_notification")]
     pub min_time_before_first_down_notification: Seconds,
 }
@@ -52,7 +52,7 @@ impl Config {
     }
 
     fn default_min_time_between_write() -> Seconds {
-        60.into()
+        300.into()
     }
 
     fn default_notify_remind_interval() -> Seconds {
@@ -60,7 +60,7 @@ impl Config {
     }
 
     fn default_min_time_before_first_down_notification() -> Seconds {
-        60.into()
+        30.into()
     }
 }
 

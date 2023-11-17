@@ -1,6 +1,6 @@
 [package]
 name = "conn_mon"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 default-run = "conn_mon"
 
@@ -10,12 +10,14 @@ default-run = "conn_mon"
 chrono = { version = "0.4.26", default-features = false, features = ["clock"] }
 anyhow = "1.0.72"
 clap = { version = "4.3.21", features = ["derive", "cargo"] }
-env_logger = "0.10.0"
 log = "0.4.19"
 regex = "1.9.1"
-rstest = "0.18.1"
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.104"
-serenity = "0.11.6"
+serenity = { git = "https://github.com/serenity-rs/serenity/", branch = "next" }
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 lettre = "0.11.0"
+log4rs = "1.2.0"
+
+[dev-dependencies]
+rstest = "0.18.1"

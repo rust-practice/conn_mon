@@ -1,8 +1,8 @@
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
-use log::{debug, info, LevelFilter};
+use log::LevelFilter;
 
 #[derive(Parser, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Default)]
 #[command(
@@ -29,20 +29,9 @@ impl Cli {
     }
     /// Changes the current working directory to path if one is given
     pub fn update_current_working_dir(&self) -> anyhow::Result<()> {
-        debug!(
-            "Before attempting update current dir, it is: {}",
-            env::current_dir()?.display()
-        );
         if let Some(path) = &self.working_dir {
-            info!("Going to update working directory to to '{path}'");
             std::env::set_current_dir(path)
                 .with_context(|| format!("Failed to set current dir to: '{path}'"))?;
-            info!(
-                "After updating current dir, it is: '{}'",
-                env::current_dir()?.display()
-            );
-        } else {
-            debug!("No user supplied path found. No change")
         }
         Ok(())
     }
