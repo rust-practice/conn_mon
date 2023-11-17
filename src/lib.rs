@@ -2,6 +2,7 @@
 mod cli;
 mod config;
 mod event_recorder;
+mod logging;
 mod notification;
 mod ping;
 mod state_management;
@@ -22,13 +23,20 @@ pub(crate) use crate::{
 };
 use anyhow::Context;
 use event_recorder::{ResponseMessage, TargetID};
-use log::debug;
+use log::{debug, warn};
 
 pub use crate::{cli::Cli, event_recorder::TimestampedResponse};
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     cli.update_current_working_dir()
         .context("Failed to update current working directory")?;
+    logging::init_logging(cli.log_level.into())?;
+    warn!(
+        "Starting up in dir: {:?}",
+        std::env::current_dir()
+            .context("Failed to get cwd")?
+            .display()
+    );
     let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
 
     let (tx, rx) = mpsc::channel();
