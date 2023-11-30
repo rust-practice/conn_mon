@@ -1,6 +1,6 @@
 [package]
 name = "conn_mon"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 default-run = "conn_mon"
 
@@ -14,7 +14,7 @@ log = "0.4.19"
 regex = "1.9.1"
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.104"
-serenity = { git = "https://github.com/serenity-rs/serenity/", branch = "next" }
+serenity = { git = "https://github.com/serenity-rs/serenity/", tag = "v0.12.0-rc2" }
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 lettre = "0.11.0"
 log4rs = "1.2.0"

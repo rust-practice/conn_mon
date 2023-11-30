@@ -24,7 +24,7 @@ pub fn init_logging(level: LevelFilter) -> anyhow::Result<Handle> {
     let stderr = ConsoleAppender::builder().target(Target::Stderr).build();
 
     // Create a policy to use with the file logging
-    let trigger = SizeTrigger::new(4096); // 4kb (4 * 1024)
+    let trigger = SizeTrigger::new(2_097_152); // 2mb (2 * 1024 * 1024)
     let roller = FixedWindowRoller::builder()
         .build(archive_pattern, 10) // Roll based on pattern and max 10 archive files
         .expect("Failed to create FixedWindowRoller");
