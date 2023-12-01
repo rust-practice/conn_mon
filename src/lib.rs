@@ -1,4 +1,5 @@
 // TODO: Add option to set timeout per host
+// TODO: Add timestamp to discord messages
 mod cli;
 mod config;
 mod event_recorder;
