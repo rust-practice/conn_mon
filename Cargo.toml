@@ -1,6 +1,7 @@
 [package]
 name = "conn_mon"
 version = "0.5.1"
+# TODO Include version number in startup message
 edition = "2021"
 default-run = "conn_mon"
 
