@@ -4,6 +4,8 @@ use crate::{
     config::Config, event_recorder::TimestampedResponse, ping::PingResponse, units::Seconds,
 };
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Debug)]
 pub struct MonitorState {
     state: State,
@@ -196,8 +198,10 @@ pub enum Event {
 impl Display for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let result = match self {
-            Event::Startup => "Monitoring Tool Started Up".to_string(),
-            Event::IAmAlive(uptime) => format!("I'm still alive. Uptime: {uptime}"),
+            Event::Startup => format!("Monitoring Tool Started Up. Version {VERSION}"),
+            Event::IAmAlive(uptime) => {
+                format!("I'm still alive. Uptime: {uptime}. Version {VERSION}")
+            }
             Event::ConnectionFailed(duration) => {
                 format!("NEW Down. Outage duration IS {duration}")
             }
