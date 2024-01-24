@@ -31,6 +31,9 @@ pub struct Config {
     /// Minimum time before sending the first notification that a host went down
     #[serde(default = "Config::default_min_time_before_first_down_notification")]
     pub min_time_before_first_down_notification: Seconds,
+
+    /// If set the time of day I'm still alive messages should be sent otherwise no messages sent
+    pub keep_alive_time_of_day: Option<chrono::NaiveTime>,
 }
 
 impl Config {
