@@ -31,6 +31,9 @@ pub struct Config {
     /// Minimum time before sending the first notification that a host went down
     #[serde(default = "Config::default_min_time_before_first_down_notification")]
     pub min_time_before_first_down_notification: Seconds,
+
+    /// If set the time of day I'm still alive messages should be sent otherwise no messages sent
+    pub keep_alive_time_of_day: Option<chrono::NaiveTime>,
 }
 
 impl Config {
@@ -70,6 +73,29 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
+
+    #[test]
+    #[ignore = "Used to see serialized output"]
+    fn see_serialize_format() {
+        let conf = Config {
+            targets: vec![Target {
+                host: "127.0.0.1".to_string(),
+                display_name: None,
+                timeout: None,
+                disabled: false,
+            }],
+            default_timeout: 5.into(),
+            ping_repeat_freq: 1.into(),
+            min_time_between_write: 1.into(),
+            notify_remind_interval: 1.into(),
+            min_time_before_first_down_notification: 1.into(),
+            keep_alive_time_of_day: chrono::NaiveTime::from_hms_opt(18, 2, 3),
+        };
+
+        println!("{}", serde_json::to_string(&conf).unwrap());
+
+        panic!("This test is expected to fail to show the serialized Config");
+    }
 
     /// Ensure sample files are valid json
     #[rstest]

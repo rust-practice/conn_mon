@@ -6,12 +6,12 @@ use std::{
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender},
     thread,
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use anyhow::{bail, Context};
-use chrono::Local;
-use log::{debug, error, info};
+use chrono::{Local, NaiveTime, Timelike};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -400,21 +400,30 @@ impl<'a> ResponseManager<'a> {
 
     pub(crate) fn start_keep_alive(&self) -> anyhow::Result<()> {
         let tx = self.tx_events.clone();
-        let keep_alive_freq = Duration::from_secs(24 * 60 * 60);
         let start = Instant::now();
+        let keep_alive_time_of_day = self.config.keep_alive_time_of_day;
 
         tx.send(EventMessage::system_message(Event::Startup))
             .expect("Failed to send startup event");
-        thread::Builder::new()
-            .name("KeepAlive".to_string())
-            .spawn(move || loop {
-                thread::sleep(keep_alive_freq);
-                tx.send(EventMessage::system_message(Event::IAmAlive(
-                    start.elapsed().as_secs().into(),
-                )))
-                .expect("Failed to send keep alive event");
-            })
-            .context("Failed to start keep alive thread")?;
+
+        if let Some(target_time) = keep_alive_time_of_day {
+            warn!("Keep Alive time set for: {target_time:?}");
+            thread::Builder::new()
+                .name("KeepAlive".to_string())
+                .spawn(move || loop {
+                    let sleep_duration = seconds_to_time(target_time).expect(
+                        "This should always be valid as we are only asking for at most 1 day",
+                    );
+                    thread::sleep(sleep_duration);
+                    tx.send(EventMessage::system_message(Event::IAmAlive(
+                        start.elapsed().as_secs().into(),
+                    )))
+                    .expect("Failed to send keep alive event");
+                })
+                .context("Failed to start keep alive thread")?;
+        } else {
+            warn!("Keep Alive notifications disabled");
+        }
         Ok(())
     }
 
@@ -427,4 +436,27 @@ impl<'a> ResponseManager<'a> {
         println!("{msg}");
         Ok(())
     }
+}
+
+fn seconds_to_time(target_time: NaiveTime) -> anyhow::Result<std::time::Duration> {
+    let now = chrono::Local::now();
+    let day_shift = if now.naive_local().time() > target_time {
+        1
+    } else {
+        0
+    };
+
+    let new_date_time = (now + chrono::Duration::days(day_shift))
+        .date_naive()
+        .and_hms_opt(
+            target_time.hour(),
+            target_time.minute(),
+            target_time.second(),
+        )
+        .expect("Should always be valid built from NaiveTime");
+
+    let result = new_date_time
+        .signed_duration_since(now.naive_local())
+        .to_std()?;
+    Ok(result)
 }

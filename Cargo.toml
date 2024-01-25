@@ -1,6 +1,6 @@
 [package]
 name = "conn_mon"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 default-run = "conn_mon"
 
@@ -8,7 +8,7 @@ default-run = "conn_mon"
 
 [dependencies]
 anyhow = "1.0.72"
-chrono = { version = "0.4.26", default-features = false, features = ["clock"] }
+chrono = { version = "0.4.26", default-features = false, features = ["clock", "serde"] }
 clap = { version = "4.3.21", features = ["derive", "cargo"] }
 lettre = "0.11.0"
 log = "0.4.19"
