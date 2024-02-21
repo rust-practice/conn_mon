@@ -40,9 +40,9 @@ impl Config {
     pub fn load_from(config_path: &Path) -> anyhow::Result<Config> {
         debug!("Loading Config from: {config_path:?}");
         let file_contents = fs::read_to_string(config_path)
-            .with_context(|| format!("Failed to read contents of {config_path:?}"))?;
+            .with_context(|| format!("failed to read contents of {config_path:?}"))?;
         let result = serde_json::from_str(&file_contents)
-            .with_context(|| format!("Failed to parse contents of {config_path:?}"))?;
+            .with_context(|| format!("failed to parse contents of {config_path:?}"))?;
         Ok(result)
     }
 
@@ -94,7 +94,7 @@ mod tests {
 
         println!("{}", serde_json::to_string(&conf).unwrap());
 
-        panic!("This test is expected to fail to show the serialized Config");
+        panic!("this test is expected to fail to show the serialized Config");
     }
 
     /// Ensure sample files are valid json
@@ -111,7 +111,7 @@ mod tests {
         // Assert
         assert!(
             actual.is_ok(),
-            "Failed to load a sample config file: {path:?} because {:#?}",
+            "failed to load a sample config file: {path:?} because {:#?}",
             actual.unwrap_err()
         );
     }

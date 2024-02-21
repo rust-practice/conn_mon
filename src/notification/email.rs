@@ -42,22 +42,22 @@ impl Email {
     pub fn new() -> anyhow::Result<Self> {
         let filename = "e.data";
         let file_contents = fs::read_to_string(filename)
-            .with_context(|| format!("Failed to read email settings from {filename:?}"))?;
+            .with_context(|| format!("failed to read email settings from {filename:?}"))?;
         let email_config: EmailConfig = serde_json::from_str(&file_contents)
-            .with_context(|| format!("Failed to parse contents of {filename:?} as email config"))?;
+            .with_context(|| format!("failed to parse contents of {filename:?} as email config"))?;
         let from_mailbox = Mailbox {
             name: Some(email_config.from_name),
             email: email_config
                 .from_email
                 .parse()
-                .context("Failed to parse from email address")?,
+                .context("failed to parse from email address")?,
         };
         let to_mailbox: Mailbox = email_config
             .to_email
             .parse()
-            .context("Failed to parse to email address")?;
+            .context("failed to parse to email address")?;
         let transport = SmtpTransport::relay("smtp.gmail.com")
-            .context("Failed to build SmtpTransport")?
+            .context("failed to build SmtpTransport")?
             .credentials(Credentials::new(email_config.from_email, email_config.pass))
             .build();
         let subject = email_config.subject;
@@ -78,7 +78,7 @@ impl Email {
             .body(msg.to_string())?;
         self.transport
             .send(&email)
-            .context("Failed to send email")?;
+            .context("failed to send email")?;
         Ok(())
     }
 }

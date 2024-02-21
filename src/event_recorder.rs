@@ -49,7 +49,7 @@ impl<'a> TargetHandler<'a> {
         let time_sensitive_part_of_filename = Self::create_time_part_for_filename();
         let (file_path, file_handle) =
             Self::create_file_handle(&host_disp_name, &time_sensitive_part_of_filename)
-                .context("Failed creating file handle during TargetInfo initialization")?;
+                .context("failed creating file handle during TargetInfo initialization")?;
         let result = Self {
             host_disp_name,
             pending_for_file: Default::default(),
@@ -75,7 +75,7 @@ impl<'a> TargetHandler<'a> {
         debug!("Creating new file handle for {new_filename:?}");
 
         let path = Path::new(Self::BASE_FOLDER);
-        create_dir_all(path).context("Failed to create base directory for events")?;
+        create_dir_all(path).context("failed to create base directory for events")?;
 
         let path = path.join(new_filename);
         let result = match File::options().write(true).create_new(true).open(&path) {
@@ -111,7 +111,7 @@ impl<'a> TargetHandler<'a> {
             debug!("Updating file handle for: {}", self.host_disp_name);
             let (new_path, new_handle) =
                 Self::create_file_handle(&self.host_disp_name, &new_time_part)
-                    .context("Creating new file handle for update failed")?;
+                    .context("creating new file handle for update failed")?;
             self.time_sensitive_part_of_filename = new_time_part;
             self.file_handle = new_handle;
             self.file_path = new_path;
@@ -131,8 +131,8 @@ impl<'a> TargetHandler<'a> {
         };
         self.pending_for_file.push(response);
         self.update_file_handle()
-            .context("Failed to update FileHandle")?;
-        self.write_to_file().context("Failed to write to file")?;
+            .context("failed to update FileHandle")?;
+        self.write_to_file().context("failed to write to file")?;
         Ok(result)
     }
 
@@ -155,7 +155,7 @@ impl<'a> TargetHandler<'a> {
         // Write all messages to disk
         for response in self.pending_for_file.drain(..) {
             writeln!(self.file_handle, "{}", &json!(response).to_string())
-                .with_context(|| format!("Failed to write to file: {:?}", self.file_path))?;
+                .with_context(|| format!("failed to write to file: {:?}", self.file_path))?;
         }
         debug_assert!(self.pending_for_file.is_empty());
 
@@ -278,22 +278,22 @@ impl<'a> ResponseManager<'a> {
     pub fn start_receive_loop(&mut self) {
         debug!("Main Receive loop started for ping responses");
         loop {
-            let msg = self.rx_ping_response.recv().expect("No Senders found");
+            let msg = self.rx_ping_response.recv().expect("no Senders found");
 
             let handler = self
                 .target_map
                 .get_mut(&msg.id)
-                .expect("Failed to get handler for ID");
+                .expect("failed to get handler for ID");
 
             match handler
                 .receive_response(msg.into_response())
-                .context("Failed to handle response")
+                .context("failed to handle response")
             {
                 Ok(Some(event_msg)) => {
                     if let Err(err) = self
                         .tx_events
                         .send(event_msg)
-                        .context("Failed to send event. Event dispatch thread likely panicked")
+                        .context("failed to send event. Event dispatch thread likely panicked")
                     {
                         error!("{err:?}");
                     };
@@ -334,7 +334,7 @@ impl<'a> ResponseManager<'a> {
         thread::Builder::new()
             .name("EventDispatch".to_string())
             .spawn(move || loop {
-                let event_message = rx.recv().expect("Failed to receive event message");
+                let event_message = rx.recv().expect("failed to receive event message");
 
                 let EventMessage {
                     host_disp_name: name,
@@ -355,10 +355,10 @@ impl<'a> ResponseManager<'a> {
                 } else if !Self::send_via_discord(discord.as_ref(), msg)
                     && !Self::send_via_email(email.as_ref(), msg)
                 {
-                    error!("Failed to send notification via all means. Message was: {msg:?}");
+                    error!("failed to send notification via all means. Message was: {msg:?}");
                 }
             })
-            .context("Failed to start event loop thread")?;
+            .context("failed to start event loop thread")?;
         Ok(())
     }
 
@@ -369,7 +369,7 @@ impl<'a> ResponseManager<'a> {
             Some(discord) => match discord.send(msg) {
                 Ok(()) => true,
                 Err(e) => {
-                    error!("Failed to send message via discord: {e:?}");
+                    error!("failed to send message via discord: {e:?}");
                     false
                 }
             },
@@ -387,7 +387,7 @@ impl<'a> ResponseManager<'a> {
             Some(email) => match email.send(msg) {
                 Ok(()) => true,
                 Err(e) => {
-                    error!("Failed to send message via email: {e:?}");
+                    error!("failed to send message via email: {e:?}");
                     false
                 }
             },
@@ -404,7 +404,7 @@ impl<'a> ResponseManager<'a> {
         let keep_alive_time_of_day = self.config.keep_alive_time_of_day;
 
         tx.send(EventMessage::system_message(Event::Startup))
-            .expect("Failed to send startup event");
+            .expect("failed to send startup event");
 
         if let Some(target_time) = keep_alive_time_of_day {
             warn!("Keep Alive time set for: {target_time:?}");
@@ -418,9 +418,9 @@ impl<'a> ResponseManager<'a> {
                     tx.send(EventMessage::system_message(Event::IAmAlive(
                         start.elapsed().as_secs().into(),
                     )))
-                    .expect("Failed to send keep alive event");
+                    .expect("failed to send keep alive event");
                 })
-                .context("Failed to start keep alive thread")?;
+                .context("failed to start keep alive thread")?;
         } else {
             warn!("Keep Alive notifications disabled");
         }
@@ -430,7 +430,7 @@ impl<'a> ResponseManager<'a> {
     pub(crate) fn log_events_output_folder(&self) -> anyhow::Result<()> {
         let event_output_folder = TargetHandler::BASE_FOLDER;
         let event_output_folder = canonicalize(event_output_folder)
-            .context("Canonicalization of event output folder failed")?;
+            .context("canonicalization of event output folder failed")?;
         let msg = format!("Event logs are being stored at: {event_output_folder:?}");
         info!("{msg}");
         println!("{msg}");
@@ -453,7 +453,7 @@ fn seconds_to_time(target_time: NaiveTime) -> anyhow::Result<std::time::Duration
             target_time.minute(),
             target_time.second(),
         )
-        .expect("Should always be valid built from NaiveTime");
+        .expect("should always be valid built from NaiveTime");
 
     let result = new_date_time
         .signed_duration_since(now.naive_local())

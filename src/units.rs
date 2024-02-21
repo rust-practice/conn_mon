@@ -53,8 +53,8 @@ impl TryFrom<(&str, &str)> for Milliseconds {
     type Error = anyhow::Error;
 
     fn try_from((ms, ms_frac): (&str, &str)) -> Result<Self, Self::Error> {
-        let mut ms: u64 = ms.parse().context("Failed to parse ms in ping")?;
-        let ms_frac: u64 = ms_frac.parse().context("Failed to parse ms_frac in ping")?;
+        let mut ms: u64 = ms.parse().context("failed to parse ms in ping")?;
+        let ms_frac: u64 = ms_frac.parse().context("failed to parse ms_frac in ping")?;
         if ms_frac >= 50 {
             ms += 1;
         }

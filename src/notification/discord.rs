@@ -32,12 +32,12 @@ impl Discord {
     async fn do_send(&self, msg: &str) -> anyhow::Result<()> {
         let webhook = Webhook::from_url(&self.http, &self.url)
             .await
-            .context("Failed to build webhook")?;
+            .context("failed to build webhook")?;
         let builder = ExecuteWebhook::new().content(msg);
         webhook
             .execute(&self.http, true, builder)
             .await
-            .context("Failed to send msg via discord using webhook")?;
+            .context("failed to send msg via discord using webhook")?;
         Ok(())
     }
 }

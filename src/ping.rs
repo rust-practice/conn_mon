@@ -26,7 +26,7 @@ pub fn ping(target: &Target, default_timeout: &Seconds) -> PingResponse {
         Ok(out) => out,
         Err(e) => {
             return PingResponse::ErrorOS {
-                msg: format!("Failed to execute ping: {e}"),
+                msg: format!("failed to execute ping: {e}"),
             }
         }
     };
@@ -34,7 +34,7 @@ pub fn ping(target: &Target, default_timeout: &Seconds) -> PingResponse {
         Ok(out) => out,
         Err(e) => {
             return PingResponse::ErrorOS {
-                msg: format!("Failed to convert stdout to ut8: {e}"),
+                msg: format!("failed to convert stdout to ut8: {e}"),
             }
         }
     };
@@ -42,7 +42,7 @@ pub fn ping(target: &Target, default_timeout: &Seconds) -> PingResponse {
         Ok(out) => out,
         Err(e) => {
             return PingResponse::ErrorOS {
-                msg: format!("Failed to convert stdout to ut8: {e}"),
+                msg: format!("failed to convert stdout to ut8: {e}"),
             }
         }
     };
@@ -132,11 +132,11 @@ impl TryFrom<&str> for PingResponse {
         let re_pass = CELL_PASS.get_or_init(|| {
             debug!("Compiling regex for parsing ping responses");
             Regex::new(r"icmp_seq=\d+ ttl=\d+ time=(\d+)\.?(\d+)? ms")
-                .expect("Failed to compile regex")
+                .expect("failed to compile regex")
         });
         let re_fail = CELL_FAIL.get_or_init(|| {
             Regex::new(r"bytes of data.\n(?:(.*)\n)?\n---.*\n1 packets transmitted, 0 received")
-                .expect("Failed to compile regex")
+                .expect("failed to compile regex")
         });
 
         if let Some(captures) = re_pass.captures(value) {
@@ -160,7 +160,7 @@ impl TryFrom<&str> for PingResponse {
                 None => Ok(PingResponse::Timeout),
             }
         } else {
-            bail!("Failed to convert value into PingResponse. Did not match pass nor fail. Value: {value:?}");
+            bail!("failed to convert value into PingResponse. Did not match pass nor fail. Value: {value:?}");
         }
     }
 }
