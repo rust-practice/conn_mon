@@ -10,8 +10,17 @@ pub struct Milliseconds(u64);
 pub struct Seconds(u64);
 
 impl Seconds {
+    pub(crate) const fn new(value: u64) -> Self {
+        Self(value)
+    }
     pub(crate) fn as_u64(&self) -> u64 {
         self.0
+    }
+}
+
+impl Milliseconds {
+    pub(crate) const fn new(value: u64) -> Self {
+        Self(value)
     }
 }
 
@@ -31,9 +40,15 @@ impl Display for Seconds {
     }
 }
 
+impl From<Seconds> for std::time::Duration {
+    fn from(value: Seconds) -> Self {
+        Self::from_secs(value.into())
+    }
+}
+
 impl From<u64> for Milliseconds {
     fn from(value: u64) -> Self {
-        Self(value)
+        Self::new(value)
     }
 }
 
@@ -45,7 +60,7 @@ impl From<Seconds> for u64 {
 
 impl From<u64> for Seconds {
     fn from(value: u64) -> Self {
-        Self(value)
+        Self::new(value)
     }
 }
 
