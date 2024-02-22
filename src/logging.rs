@@ -27,7 +27,7 @@ pub fn init_logging(level: LevelFilter) -> anyhow::Result<Handle> {
     let trigger = SizeTrigger::new(2_097_152); // 2mb (2 * 1024 * 1024)
     let roller = FixedWindowRoller::builder()
         .build(archive_pattern, 10) // Roll based on pattern and max 10 archive files
-        .expect("Failed to create FixedWindowRoller");
+        .expect("failed to create FixedWindowRoller");
     let policy = CompoundPolicy::new(Box::new(trigger), Box::new(roller));
 
     // Logging to log file. (with rolling)
@@ -52,13 +52,13 @@ pub fn init_logging(level: LevelFilter) -> anyhow::Result<Handle> {
                 .appender("stderr")
                 .build(level),
         )
-        .context("Failed to configure logging")?;
+        .context("failed to configure logging")?;
 
     // Use this to change log levels at runtime.
     // This means you can change the default log level to trace
     // if you are trying to debug an issue and need more logs on then turn it off
     // once you are done.
-    let handle = log4rs::init_config(config).context("Failed to init_config")?;
+    let handle = log4rs::init_config(config).context("failed to init_config")?;
 
     Ok(handle)
 }

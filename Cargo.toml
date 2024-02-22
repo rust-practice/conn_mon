@@ -1,8 +1,8 @@
 [package]
 name = "conn_mon"
-version = "0.6.0"
-edition = "2021"
+version = "0.6.1"
 default-run = "conn_mon"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,10 +16,7 @@ log4rs = "1.2.0"
 regex = "1.9.1"
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.104"
-serenity = { version = "0.12.0", default-features = false, features = [
-    "model",
-    "rustls_backend",
-] }
+serenity = { version = "0.12.0", default-features = false, features = ["model", "rustls_backend"] }
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 
 [dev-dependencies]

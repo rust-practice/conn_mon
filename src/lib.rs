@@ -30,32 +30,32 @@ pub use crate::{cli::Cli, event_recorder::TimestampedResponse};
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     cli.update_current_working_dir()
-        .context("Failed to update current working directory")?;
+        .context("failed to update current working directory")?;
     logging::init_logging(cli.log_level.into())?;
     warn!(
         "Starting up in dir: {:?}",
         std::env::current_dir()
-            .context("Failed to get cwd")?
+            .context("failed to get cwd")?
             .display()
     );
-    let config = Config::load_from(&cli.get_config_path()).context("Failed to load config")?;
+    let config = Config::load_from(&cli.get_config_path()).context("failed to load config")?;
 
     let (tx, rx) = mpsc::channel();
     let mut response_manager =
-        ResponseManager::new(rx, &config).context("Failed to start response manager")?;
+        ResponseManager::new(rx, &config).context("failed to start response manager")?;
 
     // Start up a thread for each host then await the threads
     for target in config.targets.iter().filter(|t| !t.disabled) {
         let target_id = response_manager
             .register_target(target)
-            .with_context(|| format!("Failed to register target: {target}"))?;
+            .with_context(|| format!("failed to register target: {target}"))?;
         start_ping_thread(target_id, target, tx.clone(), &config)?;
     }
     drop(tx); // Drop last handle that is not used
 
     response_manager
         .log_events_output_folder()
-        .context("Failed to log output folder")?;
+        .context("failed to log output folder")?;
     response_manager.start_keep_alive()?;
     response_manager.start_receive_loop();
 
@@ -78,9 +78,9 @@ fn start_ping_thread(
             let response = ping(&target, &default_timeout);
             debug!("Response for {target} was {response:?}");
             tx.send(ResponseMessage::new(target_id, response))
-                .expect("Failed to send response update");
+                .expect("failed to send response update");
             thread::sleep(Duration::from_secs(time_between_pings));
         })
-        .context("Failed to start thread")?;
+        .context("failed to start thread")?;
     Ok(result)
 }

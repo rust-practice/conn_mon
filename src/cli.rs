@@ -31,7 +31,7 @@ impl Cli {
     pub fn update_current_working_dir(&self) -> anyhow::Result<()> {
         if let Some(path) = &self.working_dir {
             std::env::set_current_dir(path)
-                .with_context(|| format!("Failed to set current dir to: '{path}'"))?;
+                .with_context(|| format!("failed to set current dir to: '{path}'"))?;
         }
         Ok(())
     }
