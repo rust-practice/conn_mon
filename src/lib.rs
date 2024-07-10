@@ -1,5 +1,6 @@
 // TODO: Add option to set timeout per host
 // TODO: Add timestamp to discord messages
+// TODO: Add back off on attempt to write to disk on failure
 mod cli;
 mod config;
 mod event_recorder;
